@@ -1,5 +1,5 @@
 CREATE TABLE  IF NOT EXISTS  plans (
-    id BIGSERIAL PRIMARY KEY,
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
     name TEXT UNIQUE NOT NULL,              -- Free, Pro, Business
     storage_quota BIGINT NOT NULL,    -- all storage quota in bytes
     price BIGINT NOT NULL DEFAULT 0,  -- price

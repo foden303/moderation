@@ -1,6 +1,11 @@
 version: "2"
 sql:
-  - schema: "internal/data/migrations/00000000000001_create_files_table.up.sql"
+  - schema:
+      - "internal/data/migrations/00000000000001_create_files_table.up.sql"
+      - "internal/data/migrations/00000000000001_create_users_table.up.sql"
+      - "internal/data/migrations/00000000000001_create_plans_table.up.sql"
+      - "internal/data/migrations/00000000000001_create_ps_files_table.up.sql"
+      - "internal/data/migrations/00000000000001_create_subscriptions_table.up.sql"
     queries: "internal/data/postgres/queries"
     engine: "postgresql"
     gen:
@@ -10,14 +15,3 @@ sql:
         sql_package: "pgx/v5"
         emit_json_tags: true
         emit_interface: true
-
-  # - schema: "internal/data/migrations/00000000000001_create_files_table.up.sql"
-  #   queries: "internal/data/postgres/queries"
-  #   engine: "postgresql"
-  #   gen:
-  #     go:
-  #       out: "internal/data/postgres/sqlc"
-  #       package: "sqlc"
-  #       sql_package: "pgx/v5"
-  #       emit_json_tags: true
-  #       emit_interface: true

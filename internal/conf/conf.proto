@@ -29,6 +29,13 @@ message Data {
   message Database {
     string driver = 1;
     string source = 2;
+    message Pool {
+      int32 max_open_conns = 1;
+      int32 min_idle_conns = 2;
+      int64 max_conn_lifetime = 3; // in minutes
+      int64 max_conn_idle_time = 4; // in minutes
+    }
+    Pool pool = 3;
   }
   message Redis {
     string network = 1;

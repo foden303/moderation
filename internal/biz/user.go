@@ -35,11 +35,9 @@ type User struct {
 
 // UserRepo is a User repo.
 type UserRepo interface {
-	Save(context.Context, *User) (*User, error)
-	Update(context.Context, *User) (*User, error)
-	FindByID(context.Context, int64) (*User, error)
-	ListByHello(context.Context, string) ([]*User, error)
-	ListAll(context.Context) ([]*User, error)
+	GetUserByID(context.Context, string) (*User, error)
+	GetUsers(context.Context) ([]*User, error)
+	UpsertUser(context.Context, *User) (*User, error)
 }
 
 // UserUsecase is a User usecase.
@@ -52,8 +50,20 @@ func NewUserUsecase(repo UserRepo) *UserUsecase {
 	return &UserUsecase{repo: repo}
 }
 
-// CreateUser creates a User, and returns the new User.
-func (uc *UserUsecase) CreateUser(ctx context.Context, u *User) (*User, error) {
-	log.Infof("CreateUser: %v", u.Name)
-	return uc.repo.Save(ctx, u)
+// UpsertUser creates or updates a User, and returns the new or updated User.
+func (uc *UserUsecase) UpsertUser(ctx context.Context, u *User) (*User, error) {
+	log.Infof("UpsertUser: %v", u.Name)
+	return uc.repo.UpsertUser(ctx, u)
+}
+
+// GetUserByID retrieves a User by ID.
+func (uc *UserUsecase) GetUserByID(ctx context.Context, id string) (*User, error) {
+	log.Infof("GetUserByID: %v", id)
+	return uc.repo.GetUserByID(ctx, id)
+}
+
+// GetUsers retrieves all users.
+func (uc *UserUsecase) GetUsers(ctx context.Context) ([]*User, error) {
+	log.Info("GetUsers")
+	return uc.repo.GetUsers(ctx)
 }

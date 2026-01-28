@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "storage/api/common/v1;v1";
+
+// Cursor-based Pagination
+// CursorPaginationRequest for cursor-based pagination
+message CursorPaginationRequest {
+  // Base64 encoded cursor from previous response
+  string cursor = 1;
+  // Number of items to return (default: 20, max: 100)
+  int32 limit = 2;
+  // Sort field (e.g., "created_at", "updated_at", "name")
+  string sort_field = 3;
+  // Sort order: "ASC" or "DESC"
+  string sort_order = 4;
+}
+
+// CursorPaginationResponse for cursor-based pagination
+message CursorPaginationResponse {
+  // Cursor for next page
+  string next_cursor = 1;
+  // Cursor for previous page
+  string prev_cursor = 2;
+  // Whether there are more items
+  bool has_more = 3;
+  // Total count (optional, may be expensive to compute)
+  int64 total = 4;
+}
+
+// Offset-based Pagination
+// OffsetPaginationRequest for offset-based pagination
+message OffsetPaginationRequest {
+  // Page number (1-indexed)
+  int32 page = 1;
+  // Number of items per page (default: 20, max: 100)
+  int32 page_size = 2;
+  // Sort field
+  string sort_field = 3;
+  // Sort order: "ASC" or "DESC"
+  string sort_order = 4;
+}
+
+// OffsetPaginationResponse for offset-based pagination
+message OffsetPaginationResponse {
+  // Current page number
+  int32 page = 1;
+  // Items per page
+  int32 page_size = 2;
+  // Total number of items
+  int64 total_items = 3;
+  // Total number of pages
+  int32 total_pages = 4;
+  // Whether there is a next page
+  bool has_next = 5;
+  // Whether there is a previous page
+  bool has_prev = 6;
+}
