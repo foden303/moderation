@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	v1 "storage/api/helloworld/v1"
+	v1 "storage/api/storage/v1"
 	"storage/internal/biz"
 )
 

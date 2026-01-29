@@ -9,6 +9,11 @@ data:
   database:
     driver: postgres
     source: postgres://postgres:123456@localhost:5432/storage?sslmode=disable
+    pool:
+      max_open_conns: 25
+      min_idle_conns: 5
+      max_conn_lifetime: 60
+      max_conn_idle_time: 10
   redis:
     addr: 127.0.0.1:6379
     read_timeout: 0.2s

@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package storage.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "api/common/v1/pagination.proto";
+
+option go_package = "storage/api/storage/v1;v1";
+
+// Plan Message
+message Plan {
+  // id: Unique identifier for the plan
+  string id = 1;
+  // name: Name of the plan
+  string name = 2;
+  // storage_quota: Storage quota provided by the plan
+  int64 storage_quota = 3; // in bytes
+  // price: Price of the plan in cents
+  int64 price = 4;
+  // discount_price: Discounted price of the plan in cents
+  int64 discount_price = 5;
+  // duration_days: Duration of the plan in days
+  int32 duration_days = 6; // 30, 365, 0 = lifetime
+  // description: Description of the plan
+  optional string description = 7;
+  // created_by: Identifier of who created the plan
+  optional string created_by = 8;
+  // created_at: Timestamp when the plan was created
+  google.protobuf.Timestamp created_at = 9;
+  // updated_at: Timestamp when the plan was last updated
+  google.protobuf.Timestamp updated_at = 10;
+}
+// The Plan service definition
+service Plan {
+  // Create a new plan
+  rpc CreatePlan(CreatePlanRequest) returns (CreatePlanResponse) {
+    option (google.api.http) = {
+      post: "/v1/plans"
+      body: "*"
+    };
+  }
+
+  // Get plan by ID
+  rpc GetPlan(GetPlanRequest) returns (GetPlanResponse) {
+    option (google.api.http) = {
+      get: "/v1/plans/{id}"
+    };
+  }
+
+  // List all plans
+  rpc ListPlans(ListPlansRequest) returns (ListPlansResponse) {
+    option (google.api.http) = {
+      get: "/v1/plans"
+    };
+  }
+
+  // Update plan
+  rpc UpdatePlan(UpdatePlanRequest) returns (UpdatePlanResponse) {
+    option (google.api.http) = {
+      patch: "/v1/plans/{id}"
+      body: "*"
+    };
+  }
+
+  // Delete plan
+  rpc DeletePlan(DeletePlanRequest) returns (DeletePlanResponse) {
+    option (google.api.http) = {
+      delete: "/v1/plans/{id}"
+    };
+  }
+}
+
+// CreatePlan
+message CreatePlanRequest {
+  // name: Name of the plan
+  string name = 1;
+  // storage_quota: Storage quota provided by the plan
+  int64 storage_quota = 2;
+  // price: Price of the plan in cents
+  int64 price = 3;
+  // discount_price: Discounted price of the plan in cents
+  int64 discount_price = 4;
+  // duration_days: Duration of the plan in days
+  int32 duration_days = 5;
+  // description: Description of the plan
+  optional string description = 6;
+}
+
+message CreatePlanResponse {
+  // plan: Created plan details
+  Plan plan = 1;
+}
+
+// GetPlan
+message GetPlanRequest {
+  // id: Unique identifier for the plan
+  string id = 1;
+}
+
+message GetPlanResponse {
+  // plan: Retrieved plan details
+  Plan plan = 1;
+}
+
+// ListPlans
+message ListPlansRequest {
+  common.v1.CursorPaginationRequest pagination = 1;
+}
+
+message ListPlansResponse {
+  repeated Plan plans = 1;
+  common.v1.CursorPaginationResponse pagination = 2;
+}
+
+// UpdatePlan
+message UpdatePlanRequest {
+  string id = 1;
+  optional string name = 2;
+  optional int64 storage_quota = 3;
+  optional int64 price = 4;
+  optional int64 discount_price = 5;
+  optional int32 duration_days = 6;
+  optional string description = 7;
+}
+
+message UpdatePlanResponse {
+  Plan plan = 1;
+}
+
+// DeletePlan
+message DeletePlanRequest {
+  string id = 1;
+}
+
+message DeletePlanResponse {
+  bool success = 1;
+}

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS ps_files (
     id uuid PRIMARY KEY DEFAULT uuidv7(),
-    hash TEXT PRIMARY KEY NOT NULL, -- SHA-256 of the file or chunk
+    hash TEXT NOT NULL, -- SHA-256 of the file or chunk
     size BIGINT NOT NULL,
     encrypted BOOLEAN NOT NULL DEFAULT TRUE, -- client-side encryption flag
     mime_type TEXT NOT NULL,        -- MIME type, ex: image/png, application/pdf

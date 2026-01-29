@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package storage.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "api/common/v1/pagination.proto";
+
+option go_package = "storage/api/storage/v1;v1";
+// Subscription Message
+message Subscription {
+  // id: Unique identifier for the subscription
+  string id = 1;
+  // user_id: ID of the user who owns the subscription
+  string user_id = 2;
+  // plan_id: ID of the subscribed plan
+  string plan_id = 3;
+  // started_at: Subscription start time
+  google.protobuf.Timestamp started_at = 4;
+  // expired_at: Subscription expiration time
+  optional google.protobuf.Timestamp expired_at = 5;
+  // status: Subscription status
+  string status = 6; // active | expired | canceled
+  // created_by: Identifier of who created the subscription
+  optional string created_by = 7;
+  // created_at: Timestamp when the subscription was created
+  google.protobuf.Timestamp created_at = 8;
+  // updated_at: Timestamp when the subscription was last updated
+  google.protobuf.Timestamp updated_at = 9;
+  
+  // Embedded plan info (optional, for convenience)
+  optional Plan plan = 10;
+}
+// The Subscription service definition
+service Subscription {
+  // Create a new subscription
+  rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse) {
+    option (google.api.http) = {
+      post: "/v1/subscriptions"
+      body: "*"
+    };
+  }
+
+  // Get subscription by ID
+  rpc GetSubscription(GetSubscriptionRequest) returns (GetSubscriptionResponse) {
+    option (google.api.http) = {
+      get: "/v1/subscriptions/{id}"
+    };
+  }
+
+  // Get user's active subscription
+  rpc GetUserActiveSubscription(GetUserActiveSubscriptionRequest) returns (GetUserActiveSubscriptionResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/subscription"
+    };
+  }
+
+  // List all subscriptions
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (ListSubscriptionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/subscriptions"
+    };
+  }
+
+  // List user's subscription history
+  rpc ListUserSubscriptions(ListUserSubscriptionsRequest) returns (ListUserSubscriptionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/subscriptions"
+    };
+  }
+
+  // Cancel subscription
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse) {
+    option (google.api.http) = {
+      post: "/v1/subscriptions/{id}/cancel"
+      body: "*"
+    };
+  }
+
+  // Expire subscription manually
+  rpc ExpireSubscription(ExpireSubscriptionRequest) returns (ExpireSubscriptionResponse) {
+    option (google.api.http) = {
+      post: "/v1/subscriptions/{id}/expire"
+      body: "*"
+    };
+  }
+
+  // Expire all due subscriptions (admin/cron job)
+  rpc ExpireAllDueSubscriptions(ExpireAllDueSubscriptionsRequest) returns (ExpireAllDueSubscriptionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/subscriptions/expire-due"
+      body: "*"
+    };
+  }
+
+  // Reset quota to default for expired subscriptions (admin/cron job)
+  rpc ResetExpiredQuotas(ResetExpiredQuotasRequest) returns (ResetExpiredQuotasResponse) {
+    option (google.api.http) = {
+      post: "/v1/subscriptions/reset-quotas"
+      body: "*"
+    };
+  }
+}
+
+// CreateSubscription
+message CreateSubscriptionRequest {
+  // user_id: ID of the user subscribing
+  string user_id = 1;
+  // plan_id: ID of the plan to subscribe to
+  string plan_id = 2;
+  // started_at: Subscription start time (optional)
+  optional google.protobuf.Timestamp started_at = 3; // Default: now
+}
+
+message CreateSubscriptionResponse {
+  // subscription: Created subscription details
+  Subscription subscription = 1;
+}
+
+// GetSubscription
+message GetSubscriptionRequest {
+  // id: Unique identifier for the subscription
+  string id = 1;
+}
+
+message GetSubscriptionResponse {
+  // subscription: Subscription details
+  Subscription subscription = 1;
+}
+
+// GetUserActiveSubscription
+message GetUserActiveSubscriptionRequest {
+  // user_id: ID of the user
+  string user_id = 1;
+}
+
+message GetUserActiveSubscriptionResponse {
+  // subscription: Active subscription details
+  optional Subscription subscription = 1; // null if no active subscription
+}
+
+// ListSubscriptions
+message ListSubscriptionsRequest {
+  common.v1.CursorPaginationRequest pagination = 1;
+  optional string status = 2; // Filter by status: active, expired, canceled
+}
+
+message ListSubscriptionsResponse {
+  repeated Subscription subscriptions = 1;
+  common.v1.CursorPaginationResponse pagination = 2;
+}
+
+// ListUserSubscriptions
+message ListUserSubscriptionsRequest {
+  string user_id = 1;
+  common.v1.CursorPaginationRequest pagination = 2;
+}
+
+message ListUserSubscriptionsResponse {
+  repeated Subscription subscriptions = 1;
+  common.v1.CursorPaginationResponse pagination = 2;
+}
+
+// CancelSubscription
+message CancelSubscriptionRequest {
+  string id = 1;
+}
+
+message CancelSubscriptionResponse {
+  Subscription subscription = 1;
+}
+
+// ExpireSubscription
+message ExpireSubscriptionRequest {
+  string id = 1;
+}
+
+message ExpireSubscriptionResponse {
+  Subscription subscription = 1;
+}
+
+// ExpireAllDueSubscriptions
+message ExpireAllDueSubscriptionsRequest {}
+
+message ExpireAllDueSubscriptionsResponse {
+  int32 expired_count = 1;
+}
+
+// ResetExpiredQuotas
+message ResetExpiredQuotasRequest {}
+
+message ResetExpiredQuotasResponse {
+  int32 reset_count = 1;
+}
+
+// Import Plan message from plan.proto
+import "storage/v1/plan.proto";

@@ -1,7 +1,7 @@
 package server
 
 import (
-	v1 "storage/api/helloworld/v1"
+	v1 "storage/api/storage/v1"
 	"storage/internal/conf"
 	"storage/internal/service"
 

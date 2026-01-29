@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	v1 "storage/api/helloworld/v1"
+	v1 "storage/api/storage/v1"
 
 	"github.com/go-kratos/kratos/v2/errors"
 	"github.com/go-kratos/kratos/v2/log"
