@@ -1,0 +1,164 @@
+services:
+  # vLLM + Ray - High Performance LLM Server
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    command: >
+      --model meta-llama/Llama-Guard-3-1B
+      --host 0.0.0.0
+      --port 8000
+      --tensor-parallel-size 1
+      --max-model-len 4096
+      --gpu-memory-utilization 0.9
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - moderation-network
+
+  # Ollama (COMMENTED OUT - use vLLM instead)
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   environment:
+  #     - OLLAMA_HOST=0.0.0.0
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+
+  # ollama-pull:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama-pull
+  #   depends_on:
+  #     - ollama
+  #   environment:
+  #     - OLLAMA_HOST=ollama:11434
+  #   entrypoint: ["/bin/sh", "-c"]
+  #   command:
+  #     - |
+  #       sleep 10
+  #       ollama pull llama-guard3:1b
+  #   restart: "no"
+  #   networks:
+  #     - moderation-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: moderation-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: moderation
+      POSTGRES_PASSWORD: moderation123
+      POSTGRES_DB: moderation
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
+  # Redis for Bloom Filter
+  redis:
+    image: redis:7-alpine
+    container_name: moderation-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
+  # NSFW Image Detector (Falconsai/nsfw_image_detection)
+  nsfw-detector:
+    build:
+      context: ./deployments/nsfw-detector
+      dockerfile: Dockerfile
+    container_name: nsfw-detector
+    ports:
+      - "8081:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # For CPU only, remove the deploy section above
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - moderation-network
+
+  # Moderation Service
+  moderation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: moderation-service
+    ports:
+      - "8082:8000"   # HTTP
+      - "9000:9000"   # gRPC
+    environment:
+      - DATABASE_URL=postgres://moderation:moderation123@postgres:5432/moderation?sslmode=disable
+      - REDIS_ADDR=redis:6379
+      - VLLM_URL=http://vllm:8000
+      - VLLM_MODEL=meta-llama/Llama-Guard-3-1B
+      - NSFW_URL=http://nsfw-detector:8080
+    depends_on:
+      vllm:
+        condition: service_healthy
+      nsfw-detector:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
+volumes:
+  vllm_cache:
+  postgres_data:
+  redis_data:
+
+networks:
+  moderation-network:
+    driver: bridge
+

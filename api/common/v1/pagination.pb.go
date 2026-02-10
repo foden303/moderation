@@ -21,6 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Cursor-based Pagination
 // CursorPaginationRequest for cursor-based pagination
 type CursorPaginationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -167,6 +168,7 @@ func (x *CursorPaginationResponse) GetTotal() int64 {
 	return 0
 }
 
+// Offset-based Pagination
 // OffsetPaginationRequest for offset-based pagination
 type OffsetPaginationRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -365,7 +367,8 @@ const file_common_v1_pagination_proto_rawDesc = "" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
 	"totalPages\x12\x19\n" +
 	"\bhas_next\x18\x05 \x01(\bR\ahasNext\x12\x19\n" +
-	"\bhas_prev\x18\x06 \x01(\bR\ahasPrevB\x1aZ\x18storage/api/common/v1;v1b\x06proto3"
+	"\bhas_prev\x18\x06 \x01(\bR\ahasPrevB8\n" +
+	"\tcommon.v1P\x01Z\x1bmoderation/api/common/v1;v1\xa2\x02\vAPIcommonV1b\x06proto3"
 
 var (
 	file_common_v1_pagination_proto_rawDescOnce sync.Once

@@ -6,31 +6,29 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
-	AutoResetQuotaDefault(ctx context.Context, arg AutoResetQuotaDefaultParams) error
-	CountPlans(ctx context.Context) (int64, error)
-	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
-	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error)
-	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	ExpireSubscription(ctx context.Context, arg ExpireSubscriptionParams) error
-	ExpireSubscriptions(ctx context.Context, arg ExpireSubscriptionsParams) error
-	GetPlanByID(ctx context.Context, id int64) (Plan, error)
-	GetPlans(ctx context.Context) ([]Plan, error)
-	GetPlansFirstPage(ctx context.Context, limit int32) ([]Plan, error)
-	GetPlansWithCursor(ctx context.Context, arg GetPlansWithCursorParams) ([]Plan, error)
-	GetPlansWithOffset(ctx context.Context, arg GetPlansWithOffsetParams) ([]Plan, error)
-	GetSubscriptionByID(ctx context.Context, id int64) (Subscription, error)
-	GetUserByID(ctx context.Context, id string) (User, error)
-	UpdateStorageAudioUsed(ctx context.Context, arg UpdateStorageAudioUsedParams) error
-	UpdateStorageCompressUsed(ctx context.Context, arg UpdateStorageCompressUsedParams) error
-	UpdateStorageDocumentUsed(ctx context.Context, arg UpdateStorageDocumentUsedParams) error
-	UpdateStorageOtherUsed(ctx context.Context, arg UpdateStorageOtherUsedParams) error
-	UpdateStoragePhotosUsed(ctx context.Context, arg UpdateStoragePhotosUsedParams) error
-	UpdateStorageVideoUsed(ctx context.Context, arg UpdateStorageVideoUsedParams) error
-	UpdateUserStorage(ctx context.Context, arg UpdateUserStorageParams) error
-	UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error)
+	CountBadImages(ctx context.Context) (int64, error)
+	CountBadImagesByCategory(ctx context.Context, category pgtype.Text) (int64, error)
+	CountBadWords(ctx context.Context) (int64, error)
+	CountBadWordsByCategory(ctx context.Context, category pgtype.Text) (int64, error)
+	CreateBadImage(ctx context.Context, arg CreateBadImageParams) (BadImage, error)
+	CreateBadWord(ctx context.Context, arg CreateBadWordParams) (BadWord, error)
+	DeleteBadImage(ctx context.Context, phash int64) error
+	DeleteBadWord(ctx context.Context, word string) error
+	GetBadImageByPHash(ctx context.Context, phash int64) (BadImage, error)
+	GetBadImagesByPHashes(ctx context.Context, dollar_1 []int64) ([]BadImage, error)
+	GetBadWordByID(ctx context.Context, id int64) (BadWord, error)
+	GetBadWordByWord(ctx context.Context, word string) (BadWord, error)
+	ListAllBadImages(ctx context.Context) ([]BadImage, error)
+	ListAllBadWords(ctx context.Context) ([]BadWord, error)
+	ListBadImagesByCategory(ctx context.Context, arg ListBadImagesByCategoryParams) ([]BadImage, error)
+	ListBadWords(ctx context.Context, arg ListBadWordsParams) ([]BadWord, error)
+	ListBadWordsByCategory(ctx context.Context, arg ListBadWordsByCategoryParams) ([]BadWord, error)
+	UpdateBadWord(ctx context.Context, arg UpdateBadWordParams) (BadWord, error)
 }
 
 var _ Querier = (*Queries)(nil)

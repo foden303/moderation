@@ -8,7 +8,7 @@ server:
 data:
   database:
     driver: postgres
-    source: postgres://postgres:123456@localhost:5432/storage?sslmode=disable
+    source: postgres://postgres:123456@localhost:5432/moderation?sslmode=disable
     pool:
       max_open_conns: 25
       min_idle_conns: 5

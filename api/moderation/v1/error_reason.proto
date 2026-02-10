@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package moderation.v1;
+
+option go_package = "moderation/api/moderation/v1;v1";
+option java_multiple_files = true;
+option java_package = "moderation.v1";
+option objc_class_prefix = "APImoderationV1";
+
+enum ErrorReason {
+  GREETER_UNSPECIFIED = 0;
+  USER_NOT_FOUND = 1;
+}

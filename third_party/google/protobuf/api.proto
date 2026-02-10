@@ -147,8 +147,8 @@ message Method {
 //       }
 //     }
 //
-//     package google.storage.v2;
-//     service Storage {
+//     package google.moderation.v2;
+//     service moderation {
 //       rpc GetAcl(GetAclRequest) returns (Acl);
 //
 //       // Get a data record.
@@ -160,17 +160,17 @@ message Method {
 // Example of a mixin configuration:
 //
 //     apis:
-//     - name: google.storage.v2.Storage
+//     - name: google.moderation.v2.moderation
 //       mixins:
 //       - name: google.acl.v1.AccessControl
 //
 // The mixin construct implies that all methods in `AccessControl` are
 // also declared with same name and request/response types in
-// `Storage`. A documentation generator or annotation processor will
-// see the effective `Storage.GetAcl` method after inheriting
+// `moderation`. A documentation generator or annotation processor will
+// see the effective `moderation.GetAcl` method after inheriting
 // documentation and annotations as follows:
 //
-//     service Storage {
+//     service moderation {
 //       // Get the underlying ACL object.
 //       rpc GetAcl(GetAclRequest) returns (Acl) {
 //         option (google.api.http).get = "/v2/{resource=**}:getAcl";
@@ -184,14 +184,14 @@ message Method {
 // relative path under which inherited HTTP paths are placed. Example:
 //
 //     apis:
-//     - name: google.storage.v2.Storage
+//     - name: google.moderation.v2.moderation
 //       mixins:
 //       - name: google.acl.v1.AccessControl
 //         root: acls
 //
 // This implies the following inherited HTTP annotation:
 //
-//     service Storage {
+//     service moderation {
 //       // Get the underlying ACL object.
 //       rpc GetAcl(GetAclRequest) returns (Acl) {
 //         option (google.api.http).get = "/v2/acls/{resource=**}:getAcl";

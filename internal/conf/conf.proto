@@ -1,13 +1,14 @@
 syntax = "proto3";
 package kratos.api;
 
-option go_package = "storage/internal/conf;conf";
+option go_package = "moderation/internal/conf;conf";
 
 import "google/protobuf/duration.proto";
 
 message Bootstrap {
   Server server = 1;
   Data data = 2;
+  Moderation moderation = 3;
 }
 
 message Server {
@@ -43,16 +44,30 @@ message Data {
     google.protobuf.Duration read_timeout = 3;
     google.protobuf.Duration write_timeout = 4;
   }
-
-  message ElasticSearch {
-    string addr = 1;
-    string username = 2;
-    string password = 3;
-    string file_index = 4;
-    string folder_index = 5;
-    string cursor_keep_alive = 6;
-  }
   Database database = 1;
   Redis redis = 2;
-  ElasticSearch elasticsearch = 3;
 }
+
+message Moderation {
+  message Ollama {
+    bool enabled = 1;
+    string base_url = 2;         // e.g., "http://localhost:11434"
+    string model = 3;            // e.g., "llama-guard3:1b", "qwen2.5:7b-instruct"
+    google.protobuf.Duration timeout = 4;
+  }
+  
+  message PHash {
+    bool enabled = 1;
+    int32 similarity_threshold = 2; // Hamming distance threshold (default 5)
+  }
+  
+  message TextModeration {
+    int32 reject_threshold = 1;  // Severity threshold to auto-reject
+    int32 review_threshold = 2;  // Severity threshold for manual review
+  }
+  
+  Ollama ollama = 1;
+  PHash phash = 2;
+  TextModeration text = 3;
+}
+

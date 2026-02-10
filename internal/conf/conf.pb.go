@@ -26,6 +26,7 @@ type Bootstrap struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Server        *Server                `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
 	Data          *Data                  `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	Moderation    *Moderation            `protobuf:"bytes,3,opt,name=moderation,proto3" json:"moderation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -70,6 +71,13 @@ func (x *Bootstrap) GetServer() *Server {
 func (x *Bootstrap) GetData() *Data {
 	if x != nil {
 		return x.Data
+	}
+	return nil
+}
+
+func (x *Bootstrap) GetModeration() *Moderation {
+	if x != nil {
+		return x.Moderation
 	}
 	return nil
 }
@@ -130,7 +138,6 @@ type Data struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Database      *Data_Database         `protobuf:"bytes,1,opt,name=database,proto3" json:"database,omitempty"`
 	Redis         *Data_Redis            `protobuf:"bytes,2,opt,name=redis,proto3" json:"redis,omitempty"`
-	Elasticsearch *Data_ElasticSearch    `protobuf:"bytes,3,opt,name=elasticsearch,proto3" json:"elasticsearch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,9 +186,62 @@ func (x *Data) GetRedis() *Data_Redis {
 	return nil
 }
 
-func (x *Data) GetElasticsearch() *Data_ElasticSearch {
+type Moderation struct {
+	state         protoimpl.MessageState     `protogen:"open.v1"`
+	Ollama        *Moderation_Ollama         `protobuf:"bytes,1,opt,name=ollama,proto3" json:"ollama,omitempty"`
+	Phash         *Moderation_PHash          `protobuf:"bytes,2,opt,name=phash,proto3" json:"phash,omitempty"`
+	Text          *Moderation_TextModeration `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Moderation) Reset() {
+	*x = Moderation{}
+	mi := &file_conf_conf_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Moderation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Moderation) ProtoMessage() {}
+
+func (x *Moderation) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[3]
 	if x != nil {
-		return x.Elasticsearch
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Moderation.ProtoReflect.Descriptor instead.
+func (*Moderation) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Moderation) GetOllama() *Moderation_Ollama {
+	if x != nil {
+		return x.Ollama
+	}
+	return nil
+}
+
+func (x *Moderation) GetPhash() *Moderation_PHash {
+	if x != nil {
+		return x.Phash
+	}
+	return nil
+}
+
+func (x *Moderation) GetText() *Moderation_TextModeration {
+	if x != nil {
+		return x.Text
 	}
 	return nil
 }
@@ -197,7 +257,7 @@ type Server_HTTP struct {
 
 func (x *Server_HTTP) Reset() {
 	*x = Server_HTTP{}
-	mi := &file_conf_conf_proto_msgTypes[3]
+	mi := &file_conf_conf_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -209,7 +269,7 @@ func (x *Server_HTTP) String() string {
 func (*Server_HTTP) ProtoMessage() {}
 
 func (x *Server_HTTP) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[3]
+	mi := &file_conf_conf_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -257,7 +317,7 @@ type Server_GRPC struct {
 
 func (x *Server_GRPC) Reset() {
 	*x = Server_GRPC{}
-	mi := &file_conf_conf_proto_msgTypes[4]
+	mi := &file_conf_conf_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +329,7 @@ func (x *Server_GRPC) String() string {
 func (*Server_GRPC) ProtoMessage() {}
 
 func (x *Server_GRPC) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[4]
+	mi := &file_conf_conf_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +377,7 @@ type Data_Database struct {
 
 func (x *Data_Database) Reset() {
 	*x = Data_Database{}
-	mi := &file_conf_conf_proto_msgTypes[5]
+	mi := &file_conf_conf_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -329,7 +389,7 @@ func (x *Data_Database) String() string {
 func (*Data_Database) ProtoMessage() {}
 
 func (x *Data_Database) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[5]
+	mi := &file_conf_conf_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -378,7 +438,7 @@ type Data_Redis struct {
 
 func (x *Data_Redis) Reset() {
 	*x = Data_Redis{}
-	mi := &file_conf_conf_proto_msgTypes[6]
+	mi := &file_conf_conf_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +450,7 @@ func (x *Data_Redis) String() string {
 func (*Data_Redis) ProtoMessage() {}
 
 func (x *Data_Redis) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[6]
+	mi := &file_conf_conf_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -432,90 +492,6 @@ func (x *Data_Redis) GetWriteTimeout() *durationpb.Duration {
 		return x.WriteTimeout
 	}
 	return nil
-}
-
-type Data_ElasticSearch struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Addr            string                 `protobuf:"bytes,1,opt,name=addr,proto3" json:"addr,omitempty"`
-	Username        string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	Password        string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
-	FileIndex       string                 `protobuf:"bytes,4,opt,name=file_index,json=fileIndex,proto3" json:"file_index,omitempty"`
-	FolderIndex     string                 `protobuf:"bytes,5,opt,name=folder_index,json=folderIndex,proto3" json:"folder_index,omitempty"`
-	CursorKeepAlive string                 `protobuf:"bytes,6,opt,name=cursor_keep_alive,json=cursorKeepAlive,proto3" json:"cursor_keep_alive,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *Data_ElasticSearch) Reset() {
-	*x = Data_ElasticSearch{}
-	mi := &file_conf_conf_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Data_ElasticSearch) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Data_ElasticSearch) ProtoMessage() {}
-
-func (x *Data_ElasticSearch) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Data_ElasticSearch.ProtoReflect.Descriptor instead.
-func (*Data_ElasticSearch) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{2, 2}
-}
-
-func (x *Data_ElasticSearch) GetAddr() string {
-	if x != nil {
-		return x.Addr
-	}
-	return ""
-}
-
-func (x *Data_ElasticSearch) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *Data_ElasticSearch) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-func (x *Data_ElasticSearch) GetFileIndex() string {
-	if x != nil {
-		return x.FileIndex
-	}
-	return ""
-}
-
-func (x *Data_ElasticSearch) GetFolderIndex() string {
-	if x != nil {
-		return x.FolderIndex
-	}
-	return ""
-}
-
-func (x *Data_ElasticSearch) GetCursorKeepAlive() string {
-	if x != nil {
-		return x.CursorKeepAlive
-	}
-	return ""
 }
 
 type Data_Database_Pool struct {
@@ -586,15 +562,190 @@ func (x *Data_Database_Pool) GetMaxConnIdleTime() int64 {
 	return 0
 }
 
+type Moderation_Ollama struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	BaseUrl       string                 `protobuf:"bytes,2,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"` // e.g., "http://localhost:11434"
+	Model         string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`                    // e.g., "llama-guard3:1b", "qwen2.5:7b-instruct"
+	Timeout       *durationpb.Duration   `protobuf:"bytes,4,opt,name=timeout,proto3" json:"timeout,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Moderation_Ollama) Reset() {
+	*x = Moderation_Ollama{}
+	mi := &file_conf_conf_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Moderation_Ollama) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Moderation_Ollama) ProtoMessage() {}
+
+func (x *Moderation_Ollama) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Moderation_Ollama.ProtoReflect.Descriptor instead.
+func (*Moderation_Ollama) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{3, 0}
+}
+
+func (x *Moderation_Ollama) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *Moderation_Ollama) GetBaseUrl() string {
+	if x != nil {
+		return x.BaseUrl
+	}
+	return ""
+}
+
+func (x *Moderation_Ollama) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *Moderation_Ollama) GetTimeout() *durationpb.Duration {
+	if x != nil {
+		return x.Timeout
+	}
+	return nil
+}
+
+type Moderation_PHash struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Enabled             bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	SimilarityThreshold int32                  `protobuf:"varint,2,opt,name=similarity_threshold,json=similarityThreshold,proto3" json:"similarity_threshold,omitempty"` // Hamming distance threshold (default 5)
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *Moderation_PHash) Reset() {
+	*x = Moderation_PHash{}
+	mi := &file_conf_conf_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Moderation_PHash) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Moderation_PHash) ProtoMessage() {}
+
+func (x *Moderation_PHash) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Moderation_PHash.ProtoReflect.Descriptor instead.
+func (*Moderation_PHash) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{3, 1}
+}
+
+func (x *Moderation_PHash) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *Moderation_PHash) GetSimilarityThreshold() int32 {
+	if x != nil {
+		return x.SimilarityThreshold
+	}
+	return 0
+}
+
+type Moderation_TextModeration struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	RejectThreshold int32                  `protobuf:"varint,1,opt,name=reject_threshold,json=rejectThreshold,proto3" json:"reject_threshold,omitempty"` // Severity threshold to auto-reject
+	ReviewThreshold int32                  `protobuf:"varint,2,opt,name=review_threshold,json=reviewThreshold,proto3" json:"review_threshold,omitempty"` // Severity threshold for manual review
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Moderation_TextModeration) Reset() {
+	*x = Moderation_TextModeration{}
+	mi := &file_conf_conf_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Moderation_TextModeration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Moderation_TextModeration) ProtoMessage() {}
+
+func (x *Moderation_TextModeration) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Moderation_TextModeration.ProtoReflect.Descriptor instead.
+func (*Moderation_TextModeration) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{3, 2}
+}
+
+func (x *Moderation_TextModeration) GetRejectThreshold() int32 {
+	if x != nil {
+		return x.RejectThreshold
+	}
+	return 0
+}
+
+func (x *Moderation_TextModeration) GetReviewThreshold() int32 {
+	if x != nil {
+		return x.ReviewThreshold
+	}
+	return 0
+}
+
 var File_conf_conf_proto protoreflect.FileDescriptor
 
 const file_conf_conf_proto_rawDesc = "" +
 	"\n" +
 	"\x0fconf/conf.proto\x12\n" +
-	"kratos.api\x1a\x1egoogle/protobuf/duration.proto\"]\n" +
+	"kratos.api\x1a\x1egoogle/protobuf/duration.proto\"\x95\x01\n" +
 	"\tBootstrap\x12*\n" +
 	"\x06server\x18\x01 \x01(\v2\x12.kratos.api.ServerR\x06server\x12$\n" +
-	"\x04data\x18\x02 \x01(\v2\x10.kratos.api.DataR\x04data\"\xb8\x02\n" +
+	"\x04data\x18\x02 \x01(\v2\x10.kratos.api.DataR\x04data\x126\n" +
+	"\n" +
+	"moderation\x18\x03 \x01(\v2\x16.kratos.api.ModerationR\n" +
+	"moderation\"\xb8\x02\n" +
 	"\x06Server\x12+\n" +
 	"\x04http\x18\x01 \x01(\v2\x17.kratos.api.Server.HTTPR\x04http\x12+\n" +
 	"\x04grpc\x18\x02 \x01(\v2\x17.kratos.api.Server.GRPCR\x04grpc\x1ai\n" +
@@ -605,11 +756,10 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\x04GRPC\x12\x18\n" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
-	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xd2\x06\n" +
+	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\"\xc0\x04\n" +
 	"\x04Data\x125\n" +
 	"\bdatabase\x18\x01 \x01(\v2\x19.kratos.api.Data.DatabaseR\bdatabase\x12,\n" +
-	"\x05redis\x18\x02 \x01(\v2\x16.kratos.api.Data.RedisR\x05redis\x12D\n" +
-	"\relasticsearch\x18\x03 \x01(\v2\x1e.kratos.api.Data.ElasticSearchR\relasticsearch\x1a\x9c\x02\n" +
+	"\x05redis\x18\x02 \x01(\v2\x16.kratos.api.Data.RedisR\x05redis\x1a\x9c\x02\n" +
 	"\bDatabase\x12\x16\n" +
 	"\x06driver\x18\x01 \x01(\tR\x06driver\x12\x16\n" +
 	"\x06source\x18\x02 \x01(\tR\x06source\x122\n" +
@@ -623,15 +773,23 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x12<\n" +
 	"\fread_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\vreadTimeout\x12>\n" +
-	"\rwrite_timeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\fwriteTimeout\x1a\xc9\x01\n" +
-	"\rElasticSearch\x12\x12\n" +
-	"\x04addr\x18\x01 \x01(\tR\x04addr\x12\x1a\n" +
-	"\busername\x18\x02 \x01(\tR\busername\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x1d\n" +
+	"\rwrite_timeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\fwriteTimeout\"\xfb\x03\n" +
 	"\n" +
-	"file_index\x18\x04 \x01(\tR\tfileIndex\x12!\n" +
-	"\ffolder_index\x18\x05 \x01(\tR\vfolderIndex\x12*\n" +
-	"\x11cursor_keep_alive\x18\x06 \x01(\tR\x0fcursorKeepAliveB\x1cZ\x1astorage/internal/conf;confb\x06proto3"
+	"Moderation\x125\n" +
+	"\x06ollama\x18\x01 \x01(\v2\x1d.kratos.api.Moderation.OllamaR\x06ollama\x122\n" +
+	"\x05phash\x18\x02 \x01(\v2\x1c.kratos.api.Moderation.PHashR\x05phash\x129\n" +
+	"\x04text\x18\x03 \x01(\v2%.kratos.api.Moderation.TextModerationR\x04text\x1a\x88\x01\n" +
+	"\x06Ollama\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x19\n" +
+	"\bbase_url\x18\x02 \x01(\tR\abaseUrl\x12\x14\n" +
+	"\x05model\x18\x03 \x01(\tR\x05model\x123\n" +
+	"\atimeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x1aT\n" +
+	"\x05PHash\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x121\n" +
+	"\x14similarity_threshold\x18\x02 \x01(\x05R\x13similarityThreshold\x1af\n" +
+	"\x0eTextModeration\x12)\n" +
+	"\x10reject_threshold\x18\x01 \x01(\x05R\x0frejectThreshold\x12)\n" +
+	"\x10review_threshold\x18\x02 \x01(\x05R\x0freviewThresholdB\x1fZ\x1dmoderation/internal/conf;confb\x06proto3"
 
 var (
 	file_conf_conf_proto_rawDescOnce sync.Once
@@ -645,37 +803,44 @@ func file_conf_conf_proto_rawDescGZIP() []byte {
 	return file_conf_conf_proto_rawDescData
 }
 
-var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_conf_conf_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_conf_conf_proto_goTypes = []any{
-	(*Bootstrap)(nil),           // 0: kratos.api.Bootstrap
-	(*Server)(nil),              // 1: kratos.api.Server
-	(*Data)(nil),                // 2: kratos.api.Data
-	(*Server_HTTP)(nil),         // 3: kratos.api.Server.HTTP
-	(*Server_GRPC)(nil),         // 4: kratos.api.Server.GRPC
-	(*Data_Database)(nil),       // 5: kratos.api.Data.Database
-	(*Data_Redis)(nil),          // 6: kratos.api.Data.Redis
-	(*Data_ElasticSearch)(nil),  // 7: kratos.api.Data.ElasticSearch
-	(*Data_Database_Pool)(nil),  // 8: kratos.api.Data.Database.Pool
-	(*durationpb.Duration)(nil), // 9: google.protobuf.Duration
+	(*Bootstrap)(nil),                 // 0: kratos.api.Bootstrap
+	(*Server)(nil),                    // 1: kratos.api.Server
+	(*Data)(nil),                      // 2: kratos.api.Data
+	(*Moderation)(nil),                // 3: kratos.api.Moderation
+	(*Server_HTTP)(nil),               // 4: kratos.api.Server.HTTP
+	(*Server_GRPC)(nil),               // 5: kratos.api.Server.GRPC
+	(*Data_Database)(nil),             // 6: kratos.api.Data.Database
+	(*Data_Redis)(nil),                // 7: kratos.api.Data.Redis
+	(*Data_Database_Pool)(nil),        // 8: kratos.api.Data.Database.Pool
+	(*Moderation_Ollama)(nil),         // 9: kratos.api.Moderation.Ollama
+	(*Moderation_PHash)(nil),          // 10: kratos.api.Moderation.PHash
+	(*Moderation_TextModeration)(nil), // 11: kratos.api.Moderation.TextModeration
+	(*durationpb.Duration)(nil),       // 12: google.protobuf.Duration
 }
 var file_conf_conf_proto_depIdxs = []int32{
 	1,  // 0: kratos.api.Bootstrap.server:type_name -> kratos.api.Server
 	2,  // 1: kratos.api.Bootstrap.data:type_name -> kratos.api.Data
-	3,  // 2: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
-	4,  // 3: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
-	5,  // 4: kratos.api.Data.database:type_name -> kratos.api.Data.Database
-	6,  // 5: kratos.api.Data.redis:type_name -> kratos.api.Data.Redis
-	7,  // 6: kratos.api.Data.elasticsearch:type_name -> kratos.api.Data.ElasticSearch
-	9,  // 7: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
-	9,  // 8: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
-	8,  // 9: kratos.api.Data.Database.pool:type_name -> kratos.api.Data.Database.Pool
-	9,  // 10: kratos.api.Data.Redis.read_timeout:type_name -> google.protobuf.Duration
-	9,  // 11: kratos.api.Data.Redis.write_timeout:type_name -> google.protobuf.Duration
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	3,  // 2: kratos.api.Bootstrap.moderation:type_name -> kratos.api.Moderation
+	4,  // 3: kratos.api.Server.http:type_name -> kratos.api.Server.HTTP
+	5,  // 4: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
+	6,  // 5: kratos.api.Data.database:type_name -> kratos.api.Data.Database
+	7,  // 6: kratos.api.Data.redis:type_name -> kratos.api.Data.Redis
+	9,  // 7: kratos.api.Moderation.ollama:type_name -> kratos.api.Moderation.Ollama
+	10, // 8: kratos.api.Moderation.phash:type_name -> kratos.api.Moderation.PHash
+	11, // 9: kratos.api.Moderation.text:type_name -> kratos.api.Moderation.TextModeration
+	12, // 10: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
+	12, // 11: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
+	8,  // 12: kratos.api.Data.Database.pool:type_name -> kratos.api.Data.Database.Pool
+	12, // 13: kratos.api.Data.Redis.read_timeout:type_name -> google.protobuf.Duration
+	12, // 14: kratos.api.Data.Redis.write_timeout:type_name -> google.protobuf.Duration
+	12, // 15: kratos.api.Moderation.Ollama.timeout:type_name -> google.protobuf.Duration
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_conf_conf_proto_init() }
@@ -689,7 +854,7 @@ func file_conf_conf_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_conf_conf_proto_rawDesc), len(file_conf_conf_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

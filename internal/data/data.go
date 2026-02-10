@@ -3,8 +3,8 @@ package data
 import (
 	"context"
 	"database/sql"
-	"storage/internal/conf"
-	"storage/internal/data/postgres/sqlc"
+	"moderation/internal/conf"
+	"moderation/internal/data/postgres/sqlc"
 	"time"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -15,11 +15,12 @@ import (
 // ProviderSet is data providers.
 var ProviderSet = wire.NewSet(
 	NewData,
-	NewGreeterRepo,
-	NewFileRepo,
-	NewUserRepo,
-	NewPlanRepo,
-	NewPsFileRepo,
+	NewRedisCache,
+	NewBadwordRepo,
+	NewBadImageRepo,
+	NewTextModerator,
+	NewImageModerator,
+	NewVideoModerator,
 )
 
 // Data struct for db client

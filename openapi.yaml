@@ -5,6 +5,284 @@ openapi: 3.0.3
 info:
     title: ""
     version: 0.0.1
-paths: {}
+paths:
+    /api/v1/admin/badwords:
+        get:
+            tags:
+                - AdminService
+            description: ListBadWords lists all bad words.
+            operationId: AdminService_ListBadWords
+            parameters:
+                - name: category
+                  in: query
+                  schema:
+                    type: string
+                - name: limit
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+                - name: offset
+                  in: query
+                  schema:
+                    type: integer
+                    format: int32
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ListBadWordsResponse'
+        post:
+            tags:
+                - AdminService
+            description: AddBadWord adds a word to the blocklist.
+            operationId: AdminService_AddBadWord
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.AddBadWordRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.AddBadWordResponse'
+    /api/v1/admin/badwords/{word}:
+        delete:
+            tags:
+                - AdminService
+            description: RemoveBadWord removes a word from the blocklist.
+            operationId: AdminService_RemoveBadWord
+            parameters:
+                - name: word
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.RemoveBadWordResponse'
+    /api/v1/admin/bloom/rebuild:
+        post:
+            tags:
+                - AdminService
+            description: RebuildBloomFilter rebuilds the bloom filter.
+            operationId: AdminService_RebuildBloomFilter
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.RebuildBloomFilterResponse'
+    /api/v1/moderate/batch:
+        post:
+            tags:
+                - ModerationService
+            description: BatchModerate checks multiple items at once.
+            operationId: ModerationService_BatchModerate
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.BatchModerateRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.BatchModerateResponse'
+    /api/v1/moderate/comment:
+        post:
+            tags:
+                - ModerationService
+            description: ModerateComment checks a comment for harmful content.
+            operationId: ModerationService_ModerateComment
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.ModerateCommentRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
+    /api/v1/moderate/post:
+        post:
+            tags:
+                - ModerationService
+            description: ModeratePost checks a post for harmful content.
+            operationId: ModerationService_ModeratePost
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.ModeratePostRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
 components:
-    schemas: {}
+    schemas:
+        moderation.v1.AddBadWordRequest:
+            type: object
+            properties:
+                word:
+                    type: string
+                category:
+                    type: string
+                severity:
+                    type: integer
+                    format: int32
+                addedBy:
+                    type: string
+            description: Admin messages
+        moderation.v1.AddBadWordResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                message:
+                    type: string
+        moderation.v1.BadWordEntry:
+            type: object
+            properties:
+                word:
+                    type: string
+                category:
+                    type: string
+                severity:
+                    type: integer
+                    format: int32
+                addedBy:
+                    type: string
+                addedAt:
+                    type: string
+        moderation.v1.BatchItem:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                contentType:
+                    type: integer
+                    format: enum
+                content:
+                    type: string
+                authorId:
+                    type: string
+        moderation.v1.BatchModerateRequest:
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/moderation.v1.BatchItem'
+        moderation.v1.BatchModerateResponse:
+            type: object
+            properties:
+                results:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/moderation.v1.ModerationResponse'
+        moderation.v1.ListBadWordsResponse:
+            type: object
+            properties:
+                words:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/moderation.v1.BadWordEntry'
+                total:
+                    type: integer
+                    format: int32
+        moderation.v1.ModerateCommentRequest:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                content:
+                    type: string
+                authorId:
+                    type: string
+                postId:
+                    type: string
+                parentCommentId:
+                    type: string
+        moderation.v1.ModeratePostRequest:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                content:
+                    type: string
+                authorId:
+                    type: string
+                imageUrls:
+                    type: array
+                    items:
+                        type: string
+            description: Moderation messages
+        moderation.v1.ModerationResponse:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                action:
+                    type: integer
+                    format: enum
+                verdict:
+                    type: integer
+                    format: enum
+                reason:
+                    type: string
+                categories:
+                    type: array
+                    items:
+                        type: string
+                scores:
+                    type: object
+                    additionalProperties:
+                        type: number
+                        format: double
+                processedAt:
+                    type: string
+        moderation.v1.RebuildBloomFilterResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                message:
+                    type: string
+                wordsCount:
+                    type: integer
+                    format: int32
+        moderation.v1.RemoveBadWordResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                message:
+                    type: string
+tags:
+    - name: AdminService
+      description: AdminService provides admin operations for moderation.
+    - name: ModerationService
+      description: ModerationService provides content moderation for posts and comments.

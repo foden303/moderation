@@ -1,11 +1,8 @@
 version: "2"
 sql:
   - schema:
-      - "internal/data/migrations/00000000000001_create_files_table.up.sql"
-      - "internal/data/migrations/00000000000001_create_users_table.up.sql"
-      - "internal/data/migrations/00000000000001_create_plans_table.up.sql"
-      - "internal/data/migrations/00000000000001_create_ps_files_table.up.sql"
-      - "internal/data/migrations/00000000000001_create_subscriptions_table.up.sql"
+      - "internal/data/migrations/00000000000001_create_badwords_table.up.sql"
+      - "internal/data/migrations/00000000000002_create_bad_images_table.up.sql"
     queries: "internal/data/postgres/queries"
     engine: "postgresql"
     gen:

@@ -1,0 +1,280 @@
+package moderator
+
+import (
+	"context"
+	"strings"
+	"sync"
+	"time"
+
+	"moderation/internal/pkg/bloom"
+	"moderation/internal/pkg/filter"
+	"moderation/internal/pkg/llm"
+	"moderation/internal/pkg/redis"
+)
+
+// TextModerationResult represents the result of text moderation.
+type TextModerationResult struct {
+	IsClean         bool
+	Matches         []filter.AhoCorasickMatch
+	MaxSeverity     int32
+	Categories      []string
+	ShouldReject    bool
+	ShouldReview    bool
+	LLMChecked      bool
+	LLMCategories   []llm.GuardCategory
+	DetectedByLLM   bool
+	DetectedPhrases []string // Phrases detected by LLM for feedback
+}
+
+// FeedbackCallback is called when LLM detects new bad content.
+// This allows saving to DB and updating filters.
+type FeedbackCallback func(ctx context.Context, phrase string, categories []llm.GuardCategory) error
+
+// TextModerator provides text content moderation.
+type TextModerator struct {
+	bloomFilter  *bloom.Filter
+	ahoCorasick  *filter.AhoCorasick
+	ollamaClient *llm.OllamaClient
+	mu           sync.RWMutex
+
+	// Configuration
+	rejectThreshold int32 // Severity threshold for auto-reject
+	reviewThreshold int32 // Severity threshold for manual review
+	enableLLM       bool  // Whether to use LLM for secondary check
+
+	// Feedback callback for learning
+	feedbackCallback FeedbackCallback
+}
+
+// TextModeratorConfig holds configuration for TextModerator.
+type TextModeratorConfig struct {
+	BloomBits          uint
+	BloomHashFunctions uint
+	BloomKey           string
+	RejectThreshold    int32
+	ReviewThreshold    int32
+	EnableLLM          bool
+	OllamaBaseURL      string
+	OllamaModel        string
+	OllamaTimeout      time.Duration
+}
+
+// DefaultTextModeratorConfig returns default configuration.
+func DefaultTextModeratorConfig() TextModeratorConfig {
+	return TextModeratorConfig{
+		BloomBits:          1024 * 1024 * 8, // 8 million bits = 1MB
+		BloomHashFunctions: 5,
+		BloomKey:           "moderation:bloom:badwords",
+		RejectThreshold:    3,
+		ReviewThreshold:    2,
+		EnableLLM:          true,
+		OllamaBaseURL:      "http://localhost:11434",
+		OllamaModel:        "llama-guard3:1b",
+		OllamaTimeout:      30 * time.Second,
+	}
+}
+
+// NewTextModerator creates a new TextModerator.
+func NewTextModerator(redisCache redis.Cache, config TextModeratorConfig) *TextModerator {
+	tm := &TextModerator{
+		bloomFilter:     bloom.NewBloomFilter(redisCache, config.BloomKey, config.BloomBits, config.BloomHashFunctions),
+		ahoCorasick:     filter.NewAhoCorasick(),
+		rejectThreshold: config.RejectThreshold,
+		reviewThreshold: config.ReviewThreshold,
+		enableLLM:       config.EnableLLM,
+	}
+
+	// Initialize Ollama client if LLM is enabled
+	if config.EnableLLM && config.OllamaBaseURL != "" {
+		tm.ollamaClient = llm.NewOllamaClient(llm.OllamaConfig{
+			BaseURL: config.OllamaBaseURL,
+			Model:   config.OllamaModel,
+			Timeout: config.OllamaTimeout,
+		})
+	}
+
+	return tm
+}
+
+// SetFeedbackCallback sets the callback for learning new bad phrases.
+func (tm *TextModerator) SetFeedbackCallback(cb FeedbackCallback) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.feedbackCallback = cb
+}
+
+// BadWord represents a bad word with metadata.
+type BadWord struct {
+	Word     string
+	Category string
+	Severity int32
+}
+
+// RebuildFilters rebuilds both bloom filter and Aho-Corasick from the word list.
+func (tm *TextModerator) RebuildFilters(ctx context.Context, words []BadWord) error {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	// Build Aho-Corasick patterns
+	patterns := make([]filter.PatternInfo, len(words))
+	for i, w := range words {
+		patterns[i] = filter.PatternInfo{
+			Word:     w.Word,
+			Category: w.Category,
+			Severity: w.Severity,
+		}
+	}
+	tm.ahoCorasick.Build(patterns)
+
+	// Add words to bloom filter
+	for _, w := range words {
+		normalizedWord := filter.NormalizeText(w.Word)
+		if err := tm.bloomFilter.AddWithCtx(ctx, []byte(normalizedWord)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// AddWord adds a single word to the filters.
+func (tm *TextModerator) AddWord(ctx context.Context, word BadWord) error {
+	normalizedWord := filter.NormalizeText(word.Word)
+	return tm.bloomFilter.AddWithCtx(ctx, []byte(normalizedWord))
+}
+
+// Moderate checks text content for bad words with LLM fallback.
+func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModerationResult, error) {
+	result := &TextModerationResult{
+		IsClean:         true,
+		Matches:         make([]filter.AhoCorasickMatch, 0),
+		Categories:      make([]string, 0),
+		LLMCategories:   make([]llm.GuardCategory, 0),
+		DetectedPhrases: make([]string, 0),
+	}
+
+	if text == "" {
+		return result, nil
+	}
+
+	// ===== STEP 1: Fast Bloom Filter Check =====
+	words := tokenize(text)
+	hasPotentialMatch := false
+
+	for _, word := range words {
+		normalizedWord := filter.NormalizeText(word)
+		exists, err := tm.bloomFilter.ExistsWithCtx(ctx, []byte(normalizedWord))
+		if err != nil {
+			return nil, err
+		}
+		if exists {
+			hasPotentialMatch = true
+			break
+		}
+	}
+
+	// ===== STEP 2: Precise Aho-Corasick Matching =====
+	if hasPotentialMatch {
+		matches := tm.ahoCorasick.Search(text)
+
+		if len(matches) > 0 {
+			result.IsClean = false
+			result.Matches = matches
+
+			// Calculate max severity and collect categories
+			categorySet := make(map[string]struct{})
+			for _, match := range matches {
+				if match.Severity > result.MaxSeverity {
+					result.MaxSeverity = match.Severity
+				}
+				categorySet[match.Category] = struct{}{}
+			}
+
+			for cat := range categorySet {
+				result.Categories = append(result.Categories, cat)
+			}
+
+			// Determine action based on severity
+			if result.MaxSeverity >= tm.rejectThreshold {
+				result.ShouldReject = true
+			} else if result.MaxSeverity >= tm.reviewThreshold {
+				result.ShouldReview = true
+			}
+
+			return result, nil // Fast path - pattern matched
+		}
+	}
+
+	// ===== STEP 3: LLM Deep Analysis (if enabled) =====
+	if tm.enableLLM && tm.ollamaClient != nil {
+		llmResult, err := tm.ollamaClient.ModerateText(ctx, text)
+		if err != nil {
+			// LLM failed, but we continue with pattern-only result
+			// Log error but don't fail the moderation
+			return result, nil
+		}
+
+		result.LLMChecked = true
+
+		if !llmResult.IsSafe {
+			result.IsClean = false
+			result.DetectedByLLM = true
+			result.LLMCategories = llmResult.ViolatedCategories
+			result.ShouldReject = true
+
+			// Extract phrases for feedback (simplified - use full text)
+			result.DetectedPhrases = append(result.DetectedPhrases, text)
+
+			// ===== STEP 4: Feedback Loop - Learn & Store =====
+			if tm.feedbackCallback != nil {
+				// Call feedback to save to DB and update bloom filter
+				go func() {
+					feedbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+					tm.feedbackCallback(feedbackCtx, text, llmResult.ViolatedCategories)
+				}()
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// ModerateWithTimeout moderates text with a timeout.
+func (tm *TextModerator) ModerateWithTimeout(ctx context.Context, text string, timeout time.Duration) (*TextModerationResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	return tm.Moderate(ctx, text)
+}
+
+// tokenize splits text into words.
+func tokenize(text string) []string {
+	// Simple tokenization - split by whitespace and punctuation
+	words := make([]string, 0)
+	current := strings.Builder{}
+
+	for _, r := range text {
+		if isWordChar(r) {
+			current.WriteRune(r)
+		} else {
+			if current.Len() > 0 {
+				words = append(words, current.String())
+				current.Reset()
+			}
+		}
+	}
+
+	if current.Len() > 0 {
+		words = append(words, current.String())
+	}
+
+	return words
+}
+
+func isWordChar(r rune) bool {
+	return (r >= 'a' && r <= 'z') ||
+		(r >= 'A' && r <= 'Z') ||
+		(r >= '0' && r <= '9') ||
+		r == '_' ||
+		r >= 0x80 // Unicode characters
+}

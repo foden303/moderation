@@ -2,8 +2,11 @@ syntax = "proto3";
 
 package common.v1;
 
-option go_package = "storage/api/common/v1;v1";
-
+option go_package = "moderation/api/common/v1;v1";
+option java_multiple_files = true;
+option java_package = "common.v1";
+option objc_class_prefix = "APIcommonV1";
+    
 // Cursor-based Pagination
 // CursorPaginationRequest for cursor-based pagination
 message CursorPaginationRequest {

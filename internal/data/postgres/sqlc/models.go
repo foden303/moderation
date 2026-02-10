@@ -8,82 +8,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type File struct {
-	ID                  pgtype.UUID        `json:"id"`
-	FolderID            pgtype.UUID        `json:"folder_id"`
-	OwnerID             string             `json:"owner_id"`
-	Name                string             `json:"name"`
-	Type                string             `json:"type"`
-	Space               string             `json:"space"`
-	FileHash            pgtype.Text        `json:"file_hash"`
-	FileSize            pgtype.Int8        `json:"file_size"`
-	FileType            pgtype.Text        `json:"file_type"`
-	FileExt             pgtype.Text        `json:"file_ext"`
-	FileMimeType        pgtype.Text        `json:"file_mime_type"`
-	FileVideoResolution pgtype.Text        `json:"file_video_resolution"`
-	RecentAccessedAt    pgtype.Timestamptz `json:"recent_accessed_at"`
-	Shared              bool               `json:"shared"`
-	Favorite            bool               `json:"favorite"`
-	Platform            int64              `json:"platform"`
-	UniqueHash          pgtype.Text        `json:"unique_hash"`
-	DelSignature        pgtype.Text        `json:"del_signature"`
-	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
-	DeletedBy           pgtype.Text        `json:"deleted_by"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-}
-
-type Plan struct {
-	ID            int64              `json:"id"`
-	Name          string             `json:"name"`
-	StorageQuota  int64              `json:"storage_quota"`
-	Price         int64              `json:"price"`
-	DiscountPrice int64              `json:"discount_price"`
-	DurationDays  int32              `json:"duration_days"`
-	Description   pgtype.Text        `json:"description"`
-	CreatedBy     pgtype.Text        `json:"created_by"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-}
-
-type PsFile struct {
-	Hash           string             `json:"hash"`
-	Size           int64              `json:"size"`
-	Encrypted      bool               `json:"encrypted"`
-	MimeType       string             `json:"mime_type"`
-	Ext            string             `json:"ext"`
-	Checksum       pgtype.Text        `json:"checksum"`
-	TotalChunks    int32              `json:"total_chunks"`
-	ReferenceCount int32              `json:"reference_count"`
-	Status         string             `json:"status"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-}
-
-type Subscription struct {
+type BadImage struct {
 	ID        int64              `json:"id"`
-	UserID    string             `json:"user_id"`
-	PlanID    int64              `json:"plan_id"`
-	StartedAt pgtype.Timestamptz `json:"started_at"`
-	ExpiredAt pgtype.Timestamptz `json:"expired_at"`
-	Status    string             `json:"status"`
-	CreatedBy pgtype.Text        `json:"created_by"`
+	Phash     int64              `json:"phash"`
+	Category  pgtype.Text        `json:"category"`
+	NsfwScore pgtype.Float8      `json:"nsfw_score"`
+	SourceUrl pgtype.Text        `json:"source_url"`
+	AddedBy   pgtype.Text        `json:"added_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-type User struct {
-	ID                    string             `json:"id"`
-	Nickname              string             `json:"nickname"`
-	UserIdentifier        string             `json:"user_identifier"`
-	EffectiveStorageQuota int64              `json:"effective_storage_quota"`
-	StoragePhotosUsed     int64              `json:"storage_photos_used"`
-	StorageVideoUsed      int64              `json:"storage_video_used"`
-	StorageDocumentUsed   int64              `json:"storage_document_used"`
-	StorageAudioUsed      int64              `json:"storage_audio_used"`
-	StorageCompressUsed   int64              `json:"storage_compress_used"`
-	StorageOtherUsed      int64              `json:"storage_other_used"`
-	StorageTotalUsed      int64              `json:"storage_total_used"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+type BadWord struct {
+	ID        int64              `json:"id"`
+	Word      string             `json:"word"`
+	Category  pgtype.Text        `json:"category"`
+	Severity  pgtype.Int4        `json:"severity"`
+	AddedBy   pgtype.Text        `json:"added_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }

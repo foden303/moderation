@@ -1,0 +1,178 @@
+syntax = "proto3";
+
+package moderation.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "moderation/api/moderation/v1;v1";
+option java_multiple_files = true;
+option java_package = "moderation.v1";
+option objc_class_prefix = "APImoderationV1";
+// ModerationService provides content moderation for posts and comments.
+service ModerationService {
+  // ModeratePost checks a post for harmful content.
+  rpc ModeratePost(ModeratePostRequest) returns (ModerationResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/moderate/post"
+      body: "*"
+    };
+  }
+  
+  // ModerateComment checks a comment for harmful content.
+  rpc ModerateComment(ModerateCommentRequest) returns (ModerationResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/moderate/comment"
+      body: "*"
+    };
+  }
+  
+  // BatchModerate checks multiple items at once.
+  rpc BatchModerate(BatchModerateRequest) returns (BatchModerateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/moderate/batch"
+      body: "*"
+    };
+  }
+}
+
+// AdminService provides admin operations for moderation.
+service AdminService {
+  // AddBadWord adds a word to the blocklist.
+  rpc AddBadWord(AddBadWordRequest) returns (AddBadWordResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/badwords"
+      body: "*"
+    };
+  }
+  
+  // RemoveBadWord removes a word from the blocklist.
+  rpc RemoveBadWord(RemoveBadWordRequest) returns (RemoveBadWordResponse) {
+    option (google.api.http) = {
+      delete: "/api/v1/admin/badwords/{word}"
+    };
+  }
+  
+  // ListBadWords lists all bad words.
+  rpc ListBadWords(ListBadWordsRequest) returns (ListBadWordsResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/admin/badwords"
+    };
+  }
+  
+  // RebuildBloomFilter rebuilds the bloom filter.
+  rpc RebuildBloomFilter(RebuildBloomFilterRequest) returns (RebuildBloomFilterResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/bloom/rebuild"
+    };
+  }
+}
+
+// Moderation messages
+message ModeratePostRequest {
+  string request_id = 1;
+  string content = 2;
+  string author_id = 3;
+  repeated string image_urls = 4;
+}
+
+message ModerateCommentRequest {
+  string request_id = 1;
+  string content = 2;
+  string author_id = 3;
+  string post_id = 4;
+  string parent_comment_id = 5;
+}
+
+message ModerationResponse {
+  string request_id = 1;
+  ModerationAction action = 2;
+  Verdict verdict = 3;
+  string reason = 4;
+  repeated string categories = 5;
+  map<string, double> scores = 6;
+  int64 processed_at = 7;
+}
+
+enum ModerationAction {
+  MODERATION_ACTION_UNSPECIFIED = 0;
+  MODERATION_ACTION_AUTO_APPROVE = 1;
+  MODERATION_ACTION_AUTO_REJECT = 2;
+  MODERATION_ACTION_PENDING_REVIEW = 3;
+}
+
+enum Verdict {
+  VERDICT_UNSPECIFIED = 0;
+  VERDICT_CLEAN = 1;
+  VERDICT_REJECT = 2;
+  VERDICT_REVIEW = 3;
+}
+
+message BatchModerateRequest {
+  repeated BatchItem items = 1;
+}
+
+message BatchItem {
+  string request_id = 1;
+  ContentType content_type = 2;
+  string content = 3;
+  string author_id = 4;
+}
+
+enum ContentType {
+  CONTENT_TYPE_UNSPECIFIED = 0;
+  CONTENT_TYPE_POST = 1;
+  CONTENT_TYPE_COMMENT = 2;
+}
+
+message BatchModerateResponse {
+  repeated ModerationResponse results = 1;
+}
+
+// Admin messages
+message AddBadWordRequest {
+  string word = 1;
+  string category = 2;
+  int32 severity = 3;
+  string added_by = 4;
+}
+
+message AddBadWordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RemoveBadWordRequest {
+  string word = 1;
+}
+
+message RemoveBadWordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListBadWordsRequest {
+  string category = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListBadWordsResponse {
+  repeated BadWordEntry words = 1;
+  int32 total = 2;
+}
+
+message BadWordEntry {
+  string word = 1;
+  string category = 2;
+  int32 severity = 3;
+  string added_by = 4;
+  int64 added_at = 5;
+}
+
+message RebuildBloomFilterRequest {}
+
+message RebuildBloomFilterResponse {
+  bool success = 1;
+  string message = 2;
+  int32 words_count = 3;
+}

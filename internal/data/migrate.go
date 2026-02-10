@@ -2,7 +2,7 @@ package data
 
 import (
 	"database/sql"
-	"storage/internal/conf"
+	"moderation/internal/conf"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"

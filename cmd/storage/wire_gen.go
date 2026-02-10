@@ -9,11 +9,11 @@ package main
 import (
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
-	"storage/internal/biz"
-	"storage/internal/conf"
-	"storage/internal/data"
-	"storage/internal/server"
-	"storage/internal/service"
+	"moderation/internal/biz"
+	"moderation/internal/conf"
+	"moderation/internal/data"
+	"moderation/internal/server"
+	"moderation/internal/service"
 )
 
 import (
@@ -24,17 +24,29 @@ import (
 
 // wireApp init kratos application.
 func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*kratos.App, func(), error) {
-	dataData, cleanup, err := data.NewData(confData, logger)
+	cache, cleanup, err := data.NewRedisCache(confData, logger)
 	if err != nil {
 		return nil, nil, err
 	}
-	greeterRepo := data.NewGreeterRepo(dataData, logger)
-	greeterUsecase := biz.NewGreeterUsecase(greeterRepo)
-	greeterService := service.NewGreeterService(greeterUsecase)
-	grpcServer := server.NewGRPCServer(confServer, greeterService, logger)
-	httpServer := server.NewHTTPServer(confServer, greeterService, logger)
+	textModerator := data.NewTextModerator(cache, logger)
+	dataData, cleanup2, err := data.NewData(confData, logger)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	badImageRepo := data.NewBadImageRepo(dataData, logger)
+	localImageModerator := data.NewImageModerator(textModerator, cache, badImageRepo, logger)
+	localVideoModerator := data.NewVideoModerator(localImageModerator, textModerator, logger)
+	badwordRepo := data.NewBadwordRepo(dataData, logger)
+	moderationUsecase := biz.NewModerationUsecase(textModerator, localImageModerator, localVideoModerator, badwordRepo, logger)
+	moderationService := service.NewModerationService(moderationUsecase)
+	badwordUsecase := biz.NewBadwordUsecase(badwordRepo, logger)
+	adminService := service.NewAdminService(badwordUsecase, moderationUsecase)
+	grpcServer := server.NewGRPCServer(confServer, moderationService, adminService, logger)
+	httpServer := server.NewHTTPServer(confServer, moderationService, adminService, logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }

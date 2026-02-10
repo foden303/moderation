@@ -1,0 +1,36 @@
+server:
+  http:
+    addr: 0.0.0.0:8000
+    timeout: 10s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 10s
+
+data:
+  database:
+    driver: postgres
+    source: postgres://moderation:moderation123@postgres:5432/moderation?sslmode=disable
+    pool:
+      max_open_conns: 50
+      min_idle_conns: 10
+      max_conn_lifetime: 30
+      max_conn_idle_time: 10
+  redis:
+    addr: redis:6379
+    read_timeout: 2s
+    write_timeout: 2s
+
+moderation:
+  ollama:
+    enabled: true
+    base_url: http://ollama:11434
+    model: llama-guard3:1b
+    timeout: 60s
+  
+  phash:
+    enabled: true
+    similarity_threshold: 5
+  
+  text:
+    reject_threshold: 8
+    review_threshold: 5
