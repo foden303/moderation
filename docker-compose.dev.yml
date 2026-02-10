@@ -93,6 +93,28 @@ services:
     networks:
       - moderation-network
 
+  # NSFW Image Detector with Ray Serve + gRPC (new implementation)
+  nsfw-detector-grpc:
+    build:
+      context: ./deployments/nsfw_detector
+      dockerfile: Dockerfile
+    container_name: nsfw-detector-grpc
+    ports:
+      - "50051:50051"  # gRPC
+      - "8265:8265"    # Ray dashboard (optional)
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
 networks:
   moderation-network:
     driver: bridge

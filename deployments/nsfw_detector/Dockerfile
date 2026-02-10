@@ -1,8 +1,18 @@
 FROM python:3.11-slim
+
 WORKDIR /app
+
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Compile proto -> Python stubs
+COPY proto/ proto/
+RUN python -m grpc_tools.protoc \
+    --proto_path=proto \
+    --python_out=. \
+    --grpc_python_out=. \
+    proto/nsfw.proto
 
 # Download model at build time
 RUN python -c "from transformers import AutoModelForImageClassification, AutoImageProcessor; \
@@ -10,8 +20,11 @@ RUN python -c "from transformers import AutoModelForImageClassification, AutoIma
     AutoModelForImageClassification.from_pretrained('Falconsai/nsfw_image_detection')"
 
 # Copy application
-COPY app.py .
+COPY server.py .
 
-EXPOSE 8080
+# gRPC port
+EXPOSE 50051
+# Ray dashboard (optional, for monitoring)
+EXPOSE 8265
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["python", "server.py"]
