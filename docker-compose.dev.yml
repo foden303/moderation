@@ -1,0 +1,98 @@
+# Docker Compose for local development
+# Only infrastructure services (Redis, PostgreSQL, vLLM, NSFW Detector)
+# The moderation server runs via VS Code debugger
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: moderation-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: moderation
+    volumes:
+      - ./tmp/postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
+  # Redis for Bloom Filter
+  redis:
+    image: redis:7-alpine
+    container_name: moderation-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./tmp/redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
+  # vLLM - High Performance LLM Server (Llama Guard)
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./tmp/vllm_cache:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+    command: >
+      --model meta-llama/Llama-Guard-3-1B
+      --host 0.0.0.0
+      --port 8000
+      --tensor-parallel-size 1
+      --max-model-len 4096
+      --gpu-memory-utilization 0.9
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - moderation-network
+
+  # NSFW Image Detector
+  nsfw-detector:
+    build:
+      context: ./deployments/nsfw-detector
+      dockerfile: Dockerfile
+    container_name: nsfw-detector
+    ports:
+      - "8081:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - moderation-network
+
+networks:
+  moderation-network:
+    driver: bridge

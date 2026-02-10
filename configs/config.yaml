@@ -1,10 +1,10 @@
 server:
   http:
-    addr: 0.0.0.0:8000
-    timeout: 1s
+    addr: 0.0.0.0:8082
+    timeout: 10s
   grpc:
     addr: 0.0.0.0:9000
-    timeout: 1s
+    timeout: 10s
 data:
   database:
     driver: postgres
@@ -18,14 +18,18 @@ data:
     addr: 127.0.0.1:6379
     read_timeout: 0.2s
     write_timeout: 0.2s
-  elasticsearch:
-    addr: http://localhost:9200
-    username: elastic
-    password: foden@123
-    file_index: files
-    folder_index: folders
-    cursor_keep_alive: 5m
-  kafka:
-    brokers:
-      - localhost:9092
-    topic: file_events
+
+moderation:
+  ollama:
+    enabled: true
+    base_url: http://localhost:8000
+    model: meta-llama/Llama-Guard-3-1B
+    timeout: 60s
+
+  phash:
+    enabled: true
+    similarity_threshold: 5
+
+  text:
+    reject_threshold: 8
+    review_threshold: 5

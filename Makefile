@@ -49,11 +49,46 @@ api:
 build:
 	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./...
 
+.PHONY: run
+# run server locally
+run:
+	go run ./cmd/storage -conf ./configs
+
 .PHONY: generate
 # generate
 generate:
 	go generate ./...
 	go mod tidy
+
+.PHONY: dev-up
+# start dev infrastructure (postgres, redis, vllm, nsfw-detector)
+dev-up:
+	docker compose -f docker-compose.dev.yml up -d
+
+.PHONY: dev-down
+# stop dev infrastructure
+dev-down:
+	docker compose -f docker-compose.dev.yml down
+
+.PHONY: dev-logs
+# show dev infrastructure logs
+dev-logs:
+	docker compose -f docker-compose.dev.yml logs -f
+
+.PHONY: dev-ps
+# show dev infrastructure status
+dev-ps:
+	docker compose -f docker-compose.dev.yml ps
+
+.PHONY: dev-infra-lite
+# start only postgres and redis (no GPU services)
+dev-infra-lite:
+	docker compose -f docker-compose.dev.yml up -d postgres redis
+
+.PHONY: dev-reset
+# reset dev infrastructure (remove volumes)
+dev-reset:
+	docker compose -f docker-compose.dev.yml down -v
 
 .PHONY: all
 # generate all

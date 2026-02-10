@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - vllm_cache:/root/.cache/huggingface
+      - ./tmp/vllm_cache:/root/.cache/huggingface
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
     command: >
@@ -33,42 +33,6 @@ services:
     networks:
       - moderation-network
 
-  # Ollama (COMMENTED OUT - use vLLM instead)
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: ollama
-  #   ports:
-  #     - "11434:11434"
-  #   volumes:
-  #     - ollama_data:/root/.ollama
-  #   environment:
-  #     - OLLAMA_HOST=0.0.0.0
-  #   restart: unless-stopped
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             count: all
-  #             capabilities: [gpu]
-
-  # ollama-pull:
-  #   image: ollama/ollama:latest
-  #   container_name: ollama-pull
-  #   depends_on:
-  #     - ollama
-  #   environment:
-  #     - OLLAMA_HOST=ollama:11434
-  #   entrypoint: ["/bin/sh", "-c"]
-  #   command:
-  #     - |
-  #       sleep 10
-  #       ollama pull llama-guard3:1b
-  #   restart: "no"
-  #   networks:
-  #     - moderation-network
-
-  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: moderation-postgres
@@ -79,7 +43,7 @@ services:
       POSTGRES_PASSWORD: moderation123
       POSTGRES_DB: moderation
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./tmp/postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - moderation-network
@@ -91,7 +55,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - ./tmp/redis_data:/data
     command: redis-server --appendonly yes
     restart: unless-stopped
     networks:
@@ -152,12 +116,7 @@ services:
     restart: unless-stopped
     networks:
       - moderation-network
-
-volumes:
-  vllm_cache:
-  postgres_data:
-  redis_data:
-
+      
 networks:
   moderation-network:
     driver: bridge
