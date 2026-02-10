@@ -10,7 +10,9 @@ A high-performance content moderation service built with Go (Kratos framework) f
 - **Self-hosted**: All AI models run locally, no external API calls
 
 ## Architecture
-![architecture](./docs/architecture.png)
+
+![architecture](/docs/img/architecture.jpg)
+
 ## Quick Start
 
 ### 1. Start Services
@@ -141,7 +143,7 @@ result, err := client.DetectFromBytes(ctx, imageBytes)
 
 ## Text Moderation Flow
 
-![text-moderation-flow](./docs/text-moderation-flow.png)
+![text-moderation-flow](/docs/img/text_moderation_flow.jpg)
 
 **Feedback Loop Benefit:**
 - First occurrence: ~50ms (full LLM check)
