@@ -3,7 +3,6 @@ package nsfw
 import (
 	"context"
 	"fmt"
-	"io"
 	"time"
 
 	"google.golang.org/grpc"
@@ -59,8 +58,8 @@ func (c *GRPCClient) Close() error {
 	return nil
 }
 
-// DetectFromBytes detects NSFW content from image bytes.
-func (c *GRPCClient) DetectFromBytes(ctx context.Context, imageData []byte) (*DetectionResult, error) {
+// Predict detects NSFW content from image bytes.
+func (c *GRPCClient) Predict(ctx context.Context, imageData []byte) (*pb.PredictResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
@@ -71,27 +70,11 @@ func (c *GRPCClient) DetectFromBytes(ctx context.Context, imageData []byte) (*De
 		return nil, fmt.Errorf("gRPC Predict call failed: %w", err)
 	}
 
-	return &DetectionResult{
-		IsNSFW:      resp.IsNsfw,
-		NSFWScore:   float64(resp.NsfwScore),
-		NormalScore: float64(resp.NormalScore),
-		Label:       resp.Label,
-		Confidence:  float64(resp.Confidence),
-		ProcessedAt: time.Now(),
-	}, nil
-}
-
-// DetectFromReader detects NSFW content from io.Reader.
-func (c *GRPCClient) DetectFromReader(ctx context.Context, reader io.Reader) (*DetectionResult, error) {
-	imageData, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read image: %w", err)
-	}
-	return c.DetectFromBytes(ctx, imageData)
+	return resp, nil
 }
 
 // DetectFromURL detects NSFW content from a public image URL.
-func (c *GRPCClient) DetectFromURL(ctx context.Context, imageURL string) (*DetectionResult, error) {
+func (c *GRPCClient) PredictFromURL(ctx context.Context, imageURL string) (*pb.PredictResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
@@ -102,18 +85,11 @@ func (c *GRPCClient) DetectFromURL(ctx context.Context, imageURL string) (*Detec
 		return nil, fmt.Errorf("gRPC PredictFromURL call failed: %w", err)
 	}
 
-	return &DetectionResult{
-		IsNSFW:      resp.IsNsfw,
-		NSFWScore:   float64(resp.NsfwScore),
-		NormalScore: float64(resp.NormalScore),
-		Label:       resp.Label,
-		Confidence:  float64(resp.Confidence),
-		ProcessedAt: time.Now(),
-	}, nil
+	return resp, nil
 }
 
-// DetectFromURLs detects NSFW content from multiple public image URLs (batch).
-func (c *GRPCClient) DetectFromURLs(ctx context.Context, imageURLs []string) ([]BatchURLResult, error) {
+// PredictBatchFromURLs detects NSFW content from multiple public image URLs (batch).
+func (c *GRPCClient) PredictBatchFromURLs(ctx context.Context, imageURLs []string) (*pb.PredictBatchResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
 
@@ -123,40 +99,19 @@ func (c *GRPCClient) DetectFromURLs(ctx context.Context, imageURLs []string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("gRPC PredictBatchFromURLs call failed: %w", err)
 	}
-
-	results := make([]BatchURLResult, len(resp.Predictions))
-	for i, pred := range resp.Predictions {
-		results[i].URL = pred.Url
-		if pred.Error != "" {
-			results[i].Error = fmt.Errorf("%s", pred.Error)
-		} else if pred.Result != nil {
-			results[i].Result = &DetectionResult{
-				IsNSFW:      pred.Result.IsNsfw,
-				NSFWScore:   float64(pred.Result.NsfwScore),
-				NormalScore: float64(pred.Result.NormalScore),
-				Label:       pred.Result.Label,
-				Confidence:  float64(pred.Result.Confidence),
-				ProcessedAt: time.Now(),
-			}
-		}
-	}
-
-	return results, nil
+	return resp, nil
 }
 
 // Ping checks if the gRPC NSFW API is reachable via health check.
 func (c *GRPCClient) Ping(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, c.config.Timeout)
 	defer cancel()
-
 	resp, err := c.client.HealthCheck(ctx, &pb.HealthCheckRequest{})
 	if err != nil {
 		return fmt.Errorf("gRPC health check failed: %w", err)
 	}
-
 	if resp.Status != "healthy" {
 		return fmt.Errorf("NSFW service is unhealthy: %s", resp.Status)
 	}
-
 	return nil
 }

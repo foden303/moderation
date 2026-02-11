@@ -10,7 +10,7 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
     command: >
-      --model meta-llama/Llama-Guard-3-1B
+      --model Qwen/Qwen3Guard-Gen-0.6B
       --host 0.0.0.0
       --port 8000
       --tensor-parallel-size 1

@@ -44,6 +44,15 @@ api:
 	       --openapi_out=fq_schema_naming=true,default_response=false:. \
 	       $(API_PROTO_FILES)
 
+.PHONY: nsfw-proto
+# generate nsfw detector go client from deployments proto
+nsfw-proto:
+	mkdir -p api/nsfw_detector/v1
+	protoc --proto_path=./deployments/nsfw_detector/proto \
+	       --go_out=paths=source_relative:./api/nsfw_detector/v1 \
+	       --go-grpc_out=paths=source_relative:./api/nsfw_detector/v1 \
+	       nsfw.proto
+
 .PHONY: build
 # build
 build:

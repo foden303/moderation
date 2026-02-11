@@ -6,68 +6,172 @@ option go_package = "moderation/internal/conf;conf";
 import "google/protobuf/duration.proto";
 
 message Bootstrap {
+  // Server configuration
   Server server = 1;
+  // Data configuration
   Data data = 2;
+  // Moderation configuration
   Moderation moderation = 3;
 }
 
 message Server {
   message HTTP {
+    // HTTP network
     string network = 1;
+    // HTTP address
     string addr = 2;
+    // HTTP timeout
     google.protobuf.Duration timeout = 3;
   }
   message GRPC {
+    // gRPC network
     string network = 1;
+    // gRPC address
     string addr = 2;
+    // gRPC timeout
     google.protobuf.Duration timeout = 3;
   }
+  // HTTP server
   HTTP http = 1;
+  // gRPC server
   GRPC grpc = 2;
 }
 
 message Data {
   message Database {
+    // Database driver
     string driver = 1;
+    // Database source
     string source = 2;
     message Pool {
+      // Maximum number of open connections
       int32 max_open_conns = 1;
+      // Minimum number of idle connections
       int32 min_idle_conns = 2;
-      int64 max_conn_lifetime = 3; // in minutes
-      int64 max_conn_idle_time = 4; // in minutes
+      // Maximum connection lifetime in minutes
+      int64 max_conn_lifetime = 3;
+      // Maximum connection idle time in minutes
+      int64 max_conn_idle_time = 4;
     }
+    // Database connection pool
     Pool pool = 3;
   }
   message Redis {
+    // Redis network
     string network = 1;
+    // Redis address
     string addr = 2;
+    // Redis read timeout
     google.protobuf.Duration read_timeout = 3;
+    // Redis write timeout
     google.protobuf.Duration write_timeout = 4;
   }
+  // Database connection
   Database database = 1;
+  // Redis connection
   Redis redis = 2;
 }
 
 message Moderation {
-  message Ollama {
+  message VLLM {
+    // Enable VLLM
     bool enabled = 1;
-    string base_url = 2;         // e.g., "http://localhost:11434"
-    string model = 3;            // e.g., "llama-guard3:1b", "qwen2.5:7b-instruct"
+    // VLLM base URL
+    string base_url = 2;
+    // VLLM model
+    string model = 3;
+    // VLLM timeout
     google.protobuf.Duration timeout = 4;
   }
-  
-  message PHash {
-    bool enabled = 1;
-    int32 similarity_threshold = 2; // Hamming distance threshold (default 5)
-  }
-  
-  message TextModeration {
-    int32 reject_threshold = 1;  // Severity threshold to auto-reject
-    int32 review_threshold = 2;  // Severity threshold for manual review
-  }
-  
-  Ollama ollama = 1;
-  PHash phash = 2;
-  TextModeration text = 3;
-}
 
+  message PHash {
+    // Enable PHash
+    bool enabled = 1;
+    // Hamming distance threshold (default 5)
+    int32 similarity_threshold = 2;
+  }
+
+  message TextModeration {
+    // Severity threshold to auto-reject
+    int32 reject_threshold = 1;
+    // Severity threshold for manual review
+    int32 review_threshold = 2;
+  }
+
+  message NSFWDetector {
+    // Enable NSFW detector
+    bool enabled = 1;
+    // gRPC address, e.g., "localhost:50051"
+    string addr = 2;
+    // Request timeout
+    google.protobuf.Duration timeout = 3;
+    // Score threshold (default 0.5)
+    float threshold = 4;
+  }
+  message Moderator {
+    message ImageModerator {
+      // Number of workers
+      int32 workers = 1;
+      // NSFW threshold
+      float nsfw_threshold = 2;
+      // Violence threshold
+      float violence_threshold = 3;
+      // Enable OCR
+      bool enable_ocr = 4;
+      // Request timeout
+      google.protobuf.Duration timeout = 5;
+      // Bloom filter size in bits
+      uint32 bloom_bits = 6;
+      // Number of hash functions for Bloom filter
+      uint32 bloom_hash_funcs = 7;
+      // Bloom filter key
+      string bloom_key = 8;
+    }
+    message TextModerator {
+      // Bloom filter size in bits
+      uint32 bloom_bits = 1;
+      // Number of hash functions for Bloom filter
+      uint32 bloom_hash_funcs = 2;
+      // Bloom filter key
+      string bloom_key = 3;
+      // Severity threshold to auto-reject
+      int32 reject_threshold = 4;
+      // Severity threshold for manual review
+      int32 review_threshold = 5;
+      // Enable LLM
+      bool enable_llm = 6;
+      // LLM base URL
+      string vllm_base_url = 7;
+      // LLM model
+      string vllm_model = 8;
+      // LLM timeout
+      google.protobuf.Duration vllm_timeout = 9;
+    }
+    message VideoModerator {
+      // Sample 1 frame per N seconds
+      int32 frame_sample_rate = 1;
+      // Maximum number of frames to check
+      int32 max_frames_to_check = 2;
+      // Enable audio transcription and moderation
+      bool enable_audio_check = 3;
+      // Request timeout
+      google.protobuf.Duration timeout = 4;
+    }
+    // Image moderation configuration
+    ImageModerator image_moderator = 1;
+    // Text moderation configuration
+    TextModerator text_moderator = 2;
+    // Video moderation configuration
+    VideoModerator video_moderator = 3;
+  }
+  // VLLM configuration
+  VLLM vllm = 1;
+  // PHash configuration
+  PHash phash = 2;
+  // Text moderation configuration
+  TextModeration text = 3;
+  // NSFW detector configuration
+  NSFWDetector nsfw = 4;
+  // Moderator configuration
+  Moderator moderator = 5;
+}

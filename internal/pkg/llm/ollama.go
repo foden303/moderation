@@ -14,23 +14,32 @@ import (
 // GuardCategory represents a content safety category.
 type GuardCategory string
 
+// Qwen3Guard category constants.
 const (
-	CategoryViolentCrimes     GuardCategory = "S1"  // Violent Crimes
-	CategoryNonViolentCrimes  GuardCategory = "S2"  // Non-Violent Crimes
-	CategorySexCrimes         GuardCategory = "S3"  // Sex-Related Crimes
-	CategoryChildExploitation GuardCategory = "S4"  // Child Sexual Exploitation
-	CategorySpecializedAdvice GuardCategory = "S5"  // Defamation/Specialized Advice
-	CategoryPrivacy           GuardCategory = "S6"  // Privacy
-	CategoryIntellectualProp  GuardCategory = "S7"  // Intellectual Property
-	CategoryIndiscriminate    GuardCategory = "S8"  // Indiscriminate Weapons
-	CategoryHateSpeech        GuardCategory = "S9"  // Hate
-	CategorySuicide           GuardCategory = "S10" // Suicide & Self-Harm
-	CategorySexualContent     GuardCategory = "S11" // Sexual Content
+	CategoryViolent              GuardCategory = "Violent"
+	CategoryNonViolentIllegal    GuardCategory = "Non-violent Illegal Acts"
+	CategorySexualContent        GuardCategory = "Sexual Content or Sexual Acts"
+	CategoryPII                  GuardCategory = "PII"
+	CategorySuicide              GuardCategory = "Suicide & Self-Harm"
+	CategoryUnethical            GuardCategory = "Unethical Acts"
+	CategoryPoliticallySensitive GuardCategory = "Politically Sensitive Topics"
+	CategoryCopyright            GuardCategory = "Copyright Violation"
+	CategoryJailbreak            GuardCategory = "Jailbreak"
+)
+
+// Severity represents the three-tier severity level from Qwen3Guard.
+type Severity int
+
+const (
+	SeveritySafe          Severity = 0
+	SeverityControversial Severity = 1
+	SeverityUnsafe        Severity = 2
 )
 
 // ModerationResult represents the moderation result.
 type ModerationResult struct {
 	IsSafe             bool
+	Severity           Severity
 	ViolatedCategories []GuardCategory
 	Response           string
 	Model              string
@@ -315,21 +324,6 @@ func (c *OllamaClient) ListModels(ctx context.Context) ([]string, error) {
 
 // CategoryDescription returns a human-readable description of the category.
 func CategoryDescription(cat GuardCategory) string {
-	descriptions := map[GuardCategory]string{
-		CategoryViolentCrimes:     "Violent Crimes",
-		CategoryNonViolentCrimes:  "Non-Violent Crimes",
-		CategorySexCrimes:         "Sex-Related Crimes",
-		CategoryChildExploitation: "Child Sexual Exploitation",
-		CategorySpecializedAdvice: "Defamation/Specialized Advice",
-		CategoryPrivacy:           "Privacy Violations",
-		CategoryIntellectualProp:  "Intellectual Property",
-		CategoryIndiscriminate:    "Indiscriminate Weapons",
-		CategoryHateSpeech:        "Hate Speech",
-		CategorySuicide:           "Suicide & Self-Harm",
-		CategorySexualContent:     "Sexual Content",
-	}
-	if desc, ok := descriptions[cat]; ok {
-		return desc
-	}
+	// For Qwen3Guard, category names are already human-readable.
 	return string(cat)
 }

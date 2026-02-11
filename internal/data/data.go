@@ -18,6 +18,7 @@ var ProviderSet = wire.NewSet(
 	NewRedisCache,
 	NewBadwordRepo,
 	NewBadImageRepo,
+	NewNSFWClient,
 	NewTextModerator,
 	NewImageModerator,
 	NewVideoModerator,

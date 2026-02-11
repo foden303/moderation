@@ -6,25 +6,21 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Compile proto -> Python stubs
+# Copy proto files and generate stubs
 COPY proto/ proto/
+# Compile proto files relative to project root so they end up in proto/ directory
 RUN python -m grpc_tools.protoc \
-    --proto_path=proto \
+    --proto_path=. \
     --python_out=. \
     --grpc_python_out=. \
     proto/nsfw.proto
 
-# Download model at build time
-RUN python -c "from transformers import AutoModelForImageClassification, AutoImageProcessor; \
-    AutoImageProcessor.from_pretrained('Falconsai/nsfw_image_detection'); \
-    AutoModelForImageClassification.from_pretrained('Falconsai/nsfw_image_detection')"
-
-# Copy application
+# Copy application code
 COPY server.py .
 
 # gRPC port
 EXPOSE 50051
-# Ray dashboard (optional, for monitoring)
+# Ray dashboard
 EXPOSE 8265
 
 CMD ["python", "server.py"]

@@ -33,10 +33,10 @@ message PredictBatchURLRequest {
 
 message PredictResponse {
   bool is_nsfw = 1;
-  float nsfw_score = 2;
-  float normal_score = 3;
+  double nsfw_score = 2;
+  double normal_score = 3;
   string label = 4;
-  float confidence = 5;
+  double confidence = 5;
 }
 
 message BatchPredictionResult {

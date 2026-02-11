@@ -20,16 +20,52 @@ data:
     write_timeout: 0.2s
 
 moderation:
-  ollama:
+  # Legacy fields (kept for backward compatibility during migration)
+  vllm:
     enabled: true
     base_url: http://localhost:8000
-    model: meta-llama/Llama-Guard-3-1B
-    timeout: 60s
+    model: Qwen/Qwen3Guard-Gen-0.6B
+    timeout: 30s
 
   phash:
     enabled: true
     similarity_threshold: 5
 
   text:
-    reject_threshold: 8
-    review_threshold: 5
+    reject_threshold: 3
+    review_threshold: 2
+
+  nsfw:
+    enabled: true
+    addr: localhost:50051
+    timeout: 30s
+    threshold: 0.5
+
+  # New consolidated moderator configuration
+  moderator:
+    image_moderator:
+      workers: 4
+      nsfw_threshold: 0.7
+      violence_threshold: 0.8
+      enable_ocr: false
+      timeout: 10s
+      bloom_bits: 1048576 # 1<<20
+      bloom_hash_funcs: 7
+      bloom_key: "moderation:image:bloom"
+    
+    text_moderator:
+      bloom_bits: 8388608 # 8*1024*1024
+      bloom_hash_funcs: 5
+      bloom_key: "moderation:bloom:badwords"
+      reject_threshold: 3
+      review_threshold: 2
+      enable_llm: true
+      vllm_base_url: "http://localhost:8000"
+      vllm_model: "Qwen/Qwen3Guard-Gen-0.6B"
+      vllm_timeout: 30s
+
+    video_moderator:
+      frame_sample_rate: 5
+      max_frames_to_check: 10
+      enable_audio_check: false
+      timeout: 60s

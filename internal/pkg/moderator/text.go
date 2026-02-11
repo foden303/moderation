@@ -32,10 +32,10 @@ type FeedbackCallback func(ctx context.Context, phrase string, categories []llm.
 
 // TextModerator provides text content moderation.
 type TextModerator struct {
-	bloomFilter  *bloom.Filter
-	ahoCorasick  *filter.AhoCorasick
-	ollamaClient *llm.OllamaClient
-	mu           sync.RWMutex
+	bloomFilter *bloom.Filter
+	ahoCorasick *filter.AhoCorasick
+	vllmClient  *llm.VLLMClient
+	mu          sync.RWMutex
 
 	// Configuration
 	rejectThreshold int32 // Severity threshold for auto-reject
@@ -54,9 +54,9 @@ type TextModeratorConfig struct {
 	RejectThreshold    int32
 	ReviewThreshold    int32
 	EnableLLM          bool
-	OllamaBaseURL      string
-	OllamaModel        string
-	OllamaTimeout      time.Duration
+	VLLMBaseURL        string
+	VLLMModel          string
+	VLLMTimeout        time.Duration
 }
 
 // DefaultTextModeratorConfig returns default configuration.
@@ -68,9 +68,9 @@ func DefaultTextModeratorConfig() TextModeratorConfig {
 		RejectThreshold:    3,
 		ReviewThreshold:    2,
 		EnableLLM:          true,
-		OllamaBaseURL:      "http://localhost:11434",
-		OllamaModel:        "llama-guard3:1b",
-		OllamaTimeout:      30 * time.Second,
+		VLLMBaseURL:        "http://localhost:8000",
+		VLLMModel:          "Qwen/Qwen3Guard-Gen-0.6B",
+		VLLMTimeout:        30 * time.Second,
 	}
 }
 
@@ -84,12 +84,12 @@ func NewTextModerator(redisCache redis.Cache, config TextModeratorConfig) *TextM
 		enableLLM:       config.EnableLLM,
 	}
 
-	// Initialize Ollama client if LLM is enabled
-	if config.EnableLLM && config.OllamaBaseURL != "" {
-		tm.ollamaClient = llm.NewOllamaClient(llm.OllamaConfig{
-			BaseURL: config.OllamaBaseURL,
-			Model:   config.OllamaModel,
-			Timeout: config.OllamaTimeout,
+	// Initialize vLLM client if LLM is enabled
+	if config.EnableLLM && config.VLLMBaseURL != "" {
+		tm.vllmClient = llm.NewVLLMClient(llm.VLLMConfig{
+			BaseURL: config.VLLMBaseURL,
+			Model:   config.VLLMModel,
+			Timeout: config.VLLMTimeout,
 		})
 	}
 
@@ -157,7 +157,7 @@ func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModera
 		return result, nil
 	}
 
-	// ===== STEP 1: Fast Bloom Filter Check =====
+	// step 1: Fast Bloom Filter Check
 	words := tokenize(text)
 	hasPotentialMatch := false
 
@@ -173,7 +173,7 @@ func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModera
 		}
 	}
 
-	// ===== STEP 2: Precise Aho-Corasick Matching =====
+	// step 2: Precise Aho-Corasick Matching
 	if hasPotentialMatch {
 		matches := tm.ahoCorasick.Search(text)
 
@@ -205,12 +205,11 @@ func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModera
 		}
 	}
 
-	// ===== STEP 3: LLM Deep Analysis (if enabled) =====
-	if tm.enableLLM && tm.ollamaClient != nil {
-		llmResult, err := tm.ollamaClient.ModerateText(ctx, text)
+	// step 3: LLM deep analysis via vLLM + Qwen3Guard (if enabled)
+	if tm.enableLLM && tm.vllmClient != nil {
+		llmResult, err := tm.vllmClient.ModerateText(ctx, text)
 		if err != nil {
 			// LLM failed, but we continue with pattern-only result
-			// Log error but don't fail the moderation
 			return result, nil
 		}
 
@@ -220,14 +219,20 @@ func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModera
 			result.IsClean = false
 			result.DetectedByLLM = true
 			result.LLMCategories = llmResult.ViolatedCategories
-			result.ShouldReject = true
 
-			// Extract phrases for feedback (simplified - use full text)
+			// Qwen3Guard 3-tier severity: Unsafe → reject, Controversial → review
+			switch llmResult.Severity {
+			case llm.SeverityUnsafe:
+				result.ShouldReject = true
+			case llm.SeverityControversial:
+				result.ShouldReview = true
+			}
+
+			// Extract phrases for feedback
 			result.DetectedPhrases = append(result.DetectedPhrases, text)
 
-			// ===== STEP 4: Feedback Loop - Learn & Store =====
+			// step 4: Feedback loop - learn & store
 			if tm.feedbackCallback != nil {
-				// Call feedback to save to DB and update bloom filter
 				go func() {
 					feedbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 					defer cancel()

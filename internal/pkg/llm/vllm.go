@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -14,7 +15,7 @@ import (
 // VLLMConfig contains configuration for vLLM server.
 type VLLMConfig struct {
 	BaseURL string // e.g., "http://localhost:8000" (vLLM default)
-	Model   string // e.g., "meta-llama/Llama-Guard-3-1B"
+	Model   string // e.g., "Qwen/Qwen3Guard-Gen-0.6B"
 	APIKey  string // Optional API key
 	Timeout time.Duration
 }
@@ -23,7 +24,7 @@ type VLLMConfig struct {
 func DefaultVLLMConfig() VLLMConfig {
 	return VLLMConfig{
 		BaseURL: "http://localhost:8000",
-		Model:   "meta-llama/Llama-Guard-3-1B",
+		Model:   "Qwen/Qwen3Guard-Gen-0.6B",
 		Timeout: 30 * time.Second,
 	}
 }
@@ -82,53 +83,30 @@ type vllmChatResponse struct {
 	} `json:"error,omitempty"`
 }
 
-// ModerateText checks text content for safety violations using LlamaGuard via vLLM.
+// ModerateText checks text content for safety violations using Qwen3Guard via vLLM.
+// Qwen3Guard uses simple chat format: just send user message directly.
 func (c *VLLMClient) ModerateText(ctx context.Context, text string) (*ModerationResult, error) {
-	prompt := c.formatModerationPrompt(text, "")
-	return c.callAPI(ctx, prompt)
+	messages := []vllmMessage{
+		{Role: "user", Content: text},
+	}
+	return c.callAPI(ctx, messages)
 }
 
 // ModerateConversation checks both user input and assistant response.
+// For response moderation, send user + assistant messages.
 func (c *VLLMClient) ModerateConversation(ctx context.Context, userInput, assistantResponse string) (*ModerationResult, error) {
-	prompt := c.formatModerationPrompt(userInput, assistantResponse)
-	return c.callAPI(ctx, prompt)
-}
-
-// formatModerationPrompt formats the prompt for LlamaGuard.
-func (c *VLLMClient) formatModerationPrompt(userInput, assistantResponse string) string {
-	if assistantResponse == "" {
-		return fmt.Sprintf(`<|begin_of_text|><|start_header_id|>user<|end_header_id|>
-
-Task: Check if there is unsafe content in 'User' message.
-
-<BEGIN CONVERSATION>
-User: %s
-<END CONVERSATION>
-
-Provide your safety assessment for ONLY the last User message.
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>`, userInput)
+	messages := []vllmMessage{
+		{Role: "user", Content: userInput},
+		{Role: "assistant", Content: assistantResponse},
 	}
-
-	return fmt.Sprintf(`<|begin_of_text|><|start_header_id|>user<|end_header_id|>
-
-Task: Check if there is unsafe content in the conversation.
-
-<BEGIN CONVERSATION>
-User: %s
-Assistant: %s
-<END CONVERSATION>
-
-Provide your safety assessment for ONLY the last message.
-<|eot_id|><|start_header_id|>assistant<|end_header_id|>`, userInput, assistantResponse)
+	return c.callAPI(ctx, messages)
 }
 
-func (c *VLLMClient) callAPI(ctx context.Context, prompt string) (*ModerationResult, error) {
+func (c *VLLMClient) callAPI(ctx context.Context, messages []vllmMessage) (*ModerationResult, error) {
 	reqBody := vllmChatRequest{
-		Model: c.config.Model,
-		Messages: []vllmMessage{
-			{Role: "user", Content: prompt},
-		},
-		MaxTokens:   100,
+		Model:       c.config.Model,
+		Messages:    messages,
+		MaxTokens:   128,
 		Temperature: 0.0,
 		Stream:      false,
 	}
@@ -181,6 +159,16 @@ func (c *VLLMClient) callAPI(ctx context.Context, prompt string) (*ModerationRes
 	return c.parseResponse(content, vllmResp.Model), nil
 }
 
+// Regex patterns for Qwen3Guard response parsing.
+var (
+	safetyPattern   = regexp.MustCompile(`(?i)Safety:\s*(Safe|Unsafe|Controversial)`)
+	categoryPattern = regexp.MustCompile(`(?i)(Violent|Non-violent Illegal Acts|Sexual Content or Sexual Acts|PII|Suicide & Self-Harm|Unethical Acts|Politically Sensitive Topics|Copyright Violation|Jailbreak|None)`)
+)
+
+// parseResponse parses Qwen3Guard-Gen response format:
+//
+//	Safety: Unsafe
+//	Categories: Violent
 func (c *VLLMClient) parseResponse(response, model string) *ModerationResult {
 	result := &ModerationResult{
 		Response: response,
@@ -188,20 +176,32 @@ func (c *VLLMClient) parseResponse(response, model string) *ModerationResult {
 		IsSafe:   true,
 	}
 
-	response = strings.ToLower(strings.TrimSpace(response))
+	// Extract safety label
+	safetyMatch := safetyPattern.FindStringSubmatch(response)
+	if len(safetyMatch) < 2 {
+		// Can't parse → treat as safe to avoid blocking
+		return result
+	}
 
-	if strings.HasPrefix(response, "unsafe") {
+	label := strings.ToLower(safetyMatch[1])
+	switch label {
+	case "unsafe":
 		result.IsSafe = false
+		result.Severity = SeverityUnsafe
+	case "controversial":
+		result.IsSafe = false
+		result.Severity = SeverityControversial
+	case "safe":
+		result.IsSafe = true
+		result.Severity = SeveritySafe
+	}
 
-		parts := strings.Split(response, "\n")
-		if len(parts) > 1 {
-			categories := strings.Split(parts[1], ",")
-			for _, cat := range categories {
-				cat = strings.TrimSpace(strings.ToUpper(cat))
-				if cat != "" && strings.HasPrefix(cat, "S") {
-					result.ViolatedCategories = append(result.ViolatedCategories, GuardCategory(cat))
-				}
-			}
+	// Extract categories
+	categories := categoryPattern.FindAllString(response, -1)
+	for _, cat := range categories {
+		cat = strings.TrimSpace(cat)
+		if cat != "" && !strings.EqualFold(cat, "None") {
+			result.ViolatedCategories = append(result.ViolatedCategories, GuardCategory(cat))
 		}
 	}
 

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package moderation.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "moderation/api/moderation/v1;v1";
+option java_multiple_files = true;
+option java_package = "moderation.v1";
+option objc_class_prefix = "APImoderationV1";
+
+// AdminService provides admin operations for moderation.
+service AdminService {
+  // AddBadWord adds a word to the blocklist.
+  rpc AddBadWord(AddBadWordRequest) returns (AddBadWordResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/admin/badwords"
+      body : "*"
+    };
+  }
+
+  // RemoveBadWord removes a word from the blocklist.
+  rpc RemoveBadWord(RemoveBadWordRequest) returns (RemoveBadWordResponse) {
+    option (google.api.http) = {
+      delete : "/api/v1/admin/badwords/{word}"
+    };
+  }
+
+  // ListBadWords lists all bad words.
+  rpc ListBadWords(ListBadWordsRequest) returns (ListBadWordsResponse) {
+    option (google.api.http) = {
+      get : "/api/v1/admin/badwords"
+    };
+  }
+
+  // RebuildBloomFilter rebuilds the bloom filter.
+  rpc RebuildBloomFilter(RebuildBloomFilterRequest)
+      returns (RebuildBloomFilterResponse) {
+    option (google.api.http) = {
+      post : "/api/v1/admin/bloom/rebuild"
+      body : "*"
+    };
+  }
+}
+
+// Admin messages
+message AddBadWordRequest {
+  string word = 1;
+  string category = 2;
+  int32 severity = 3;
+  string added_by = 4;
+}
+
+message AddBadWordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RemoveBadWordRequest { string word = 1; }
+
+message RemoveBadWordResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListBadWordsRequest {
+  string category = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListBadWordsResponse {
+  repeated BadWordEntry words = 1;
+  int32 total = 2;
+}
+
+message BadWordEntry {
+  string word = 1;
+  string category = 2;
+  int32 severity = 3;
+  string added_by = 4;
+  int64 added_at = 5;
+}
+
+message RebuildBloomFilterRequest {}
+
+message RebuildBloomFilterResponse {
+  bool success = 1;
+  string message = 2;
+  int32 words_count = 3;
+}

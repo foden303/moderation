@@ -77,6 +77,12 @@ paths:
                 - AdminService
             description: RebuildBloomFilter rebuilds the bloom filter.
             operationId: AdminService_RebuildBloomFilter
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.RebuildBloomFilterRequest'
+                required: true
             responses:
                 "200":
                     description: OK
@@ -84,6 +90,43 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/moderation.v1.RebuildBloomFilterResponse'
+    /api/v1/moderate:
+        post:
+            tags:
+                - ModerationService
+            operationId: ModerationService_Moderate
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.ModerateRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
+    /api/v1/moderate/audio:
+        post:
+            tags:
+                - ModerationService
+            description: ModerateAudio checks an audio for harmful content.
+            operationId: ModerationService_ModerateAudio
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.ModerateAudioRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
     /api/v1/moderate/batch:
         post:
             tags:
@@ -103,17 +146,17 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/moderation.v1.BatchModerateResponse'
-    /api/v1/moderate/comment:
+    /api/v1/moderate/content:
         post:
             tags:
                 - ModerationService
-            description: ModerateComment checks a comment for harmful content.
-            operationId: ModerationService_ModerateComment
+            description: ModerateContent checks a content for harmful content.
+            operationId: ModerationService_ModerateContent
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/moderation.v1.ModerateCommentRequest'
+                            $ref: '#/components/schemas/moderation.v1.ModerateContentRequest'
                 required: true
             responses:
                 "200":
@@ -122,17 +165,36 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/moderation.v1.ModerationResponse'
-    /api/v1/moderate/post:
+    /api/v1/moderate/image:
         post:
             tags:
                 - ModerationService
-            description: ModeratePost checks a post for harmful content.
-            operationId: ModerationService_ModeratePost
+            description: ModerateImage checks an image for harmful content.
+            operationId: ModerationService_ModerateImage
             requestBody:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/moderation.v1.ModeratePostRequest'
+                            $ref: '#/components/schemas/moderation.v1.ModerateImageRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
+    /api/v1/moderate/video:
+        post:
+            tags:
+                - ModerationService
+            description: ModerateVideo checks an video for harmful content.
+            operationId: ModerationService_ModerateVideo
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.ModerateVideoRequest'
                 required: true
             responses:
                 "200":
@@ -177,25 +239,13 @@ components:
                     type: string
                 addedAt:
                     type: string
-        moderation.v1.BatchItem:
-            type: object
-            properties:
-                requestId:
-                    type: string
-                contentType:
-                    type: integer
-                    format: enum
-                content:
-                    type: string
-                authorId:
-                    type: string
         moderation.v1.BatchModerateRequest:
             type: object
             properties:
                 items:
                     type: array
                     items:
-                        $ref: '#/components/schemas/moderation.v1.BatchItem'
+                        $ref: '#/components/schemas/moderation.v1.ModerateRequest'
         moderation.v1.BatchModerateResponse:
             type: object
             properties:
@@ -213,33 +263,64 @@ components:
                 total:
                     type: integer
                     format: int32
-        moderation.v1.ModerateCommentRequest:
+        moderation.v1.ModerateAudioRequest:
             type: object
             properties:
                 requestId:
                     type: string
-                content:
+                ownerId:
                     type: string
-                authorId:
+                audioUrl:
                     type: string
-                postId:
-                    type: string
-                parentCommentId:
-                    type: string
-        moderation.v1.ModeratePostRequest:
+        moderation.v1.ModerateContentRequest:
             type: object
             properties:
                 requestId:
                     type: string
+                ownerId:
+                    type: string
                 content:
                     type: string
-                authorId:
+        moderation.v1.ModerateImageRequest:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                ownerId:
+                    type: string
+                imageUrl:
+                    type: string
+        moderation.v1.ModerateRequest:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                ownerId:
+                    type: string
+                content:
                     type: string
                 imageUrls:
                     type: array
                     items:
                         type: string
-            description: Moderation messages
+                audioUrls:
+                    type: array
+                    items:
+                        type: string
+                videoUrls:
+                    type: array
+                    items:
+                        type: string
+            description: ModerateRequest messages
+        moderation.v1.ModerateVideoRequest:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                ownerId:
+                    type: string
+                videoUrl:
+                    type: string
         moderation.v1.ModerationResponse:
             type: object
             properties:
@@ -262,8 +343,9 @@ components:
                     additionalProperties:
                         type: number
                         format: double
-                processedAt:
-                    type: string
+        moderation.v1.RebuildBloomFilterRequest:
+            type: object
+            properties: {}
         moderation.v1.RebuildBloomFilterResponse:
             type: object
             properties:

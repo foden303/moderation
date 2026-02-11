@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	v1 "moderation/api/moderation/v1"
 	"moderation/internal/biz"
@@ -20,9 +19,10 @@ func NewModerationService(uc *biz.ModerationUsecase) *ModerationService {
 	return &ModerationService{uc: uc}
 }
 
-// ModeratePost checks a post for harmful content.
-func (s *ModerationService) ModeratePost(ctx context.Context, in *v1.ModeratePostRequest) (*v1.ModerationResponse, error) {
-	result, err := s.uc.ModeratePost(ctx, in.RequestId, in.Content, in.ImageUrls)
+// Moderate checks a post for harmful content.
+func (s *ModerationService) Moderate(ctx context.Context, in *v1.ModerateRequest) (*v1.ModerationResponse, error) {
+	// Map ModerateRequest to biz.Moderate
+	result, err := s.uc.Moderate(ctx, in.RequestId, in.Content, in.ImageUrls, in.AudioUrls, in.VideoUrls)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +30,39 @@ func (s *ModerationService) ModeratePost(ctx context.Context, in *v1.ModeratePos
 	return toProtoResponse(result), nil
 }
 
-// ModerateComment checks a comment for harmful content.
-func (s *ModerationService) ModerateComment(ctx context.Context, in *v1.ModerateCommentRequest) (*v1.ModerationResponse, error) {
+// ModerateContent checks text content for harmful content.
+func (s *ModerationService) ModerateContent(ctx context.Context, in *v1.ModerateContentRequest) (*v1.ModerationResponse, error) {
 	result, err := s.uc.ModerateText(ctx, in.RequestId, in.Content)
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoResponse(result), nil
+}
+
+// ModerateImage checks an image for harmful content.
+func (s *ModerationService) ModerateImage(ctx context.Context, in *v1.ModerateImageRequest) (*v1.ModerationResponse, error) {
+	result, err := s.uc.ModerateImage(ctx, in.RequestId, in.ImageUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoResponse(result), nil
+}
+
+// ModerateVideo checks a video for harmful content.
+func (s *ModerationService) ModerateVideo(ctx context.Context, in *v1.ModerateVideoRequest) (*v1.ModerationResponse, error) {
+	result, err := s.uc.ModerateVideo(ctx, in.RequestId, in.VideoUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	return toProtoResponse(result), nil
+}
+
+// ModerateAudio checks an audio for harmful content.
+func (s *ModerationService) ModerateAudio(ctx context.Context, in *v1.ModerateAudioRequest) (*v1.ModerationResponse, error) {
+	result, err := s.uc.ModerateAudio(ctx, in.RequestId, in.AudioUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -48,15 +78,8 @@ func (s *ModerationService) BatchModerate(ctx context.Context, in *v1.BatchModer
 		var result *biz.ModerationResult
 		var err error
 
-		switch item.ContentType {
-		case v1.ContentType_CONTENT_TYPE_POST:
-			result, err = s.uc.ModeratePost(ctx, item.RequestId, item.Content, nil)
-		case v1.ContentType_CONTENT_TYPE_COMMENT:
-			result, err = s.uc.ModerateText(ctx, item.RequestId, item.Content)
-		default:
-			result, err = s.uc.ModerateText(ctx, item.RequestId, item.Content)
-		}
-
+		// call service moderate
+		result, err = s.uc.Moderate(ctx, item.RequestId, item.Content, item.ImageUrls, item.AudioUrls, item.VideoUrls)
 		if err != nil {
 			return nil, err
 		}
@@ -69,17 +92,12 @@ func (s *ModerationService) BatchModerate(ctx context.Context, in *v1.BatchModer
 // toProtoResponse converts biz.ModerationResult to v1.ModerationResponse.
 func toProtoResponse(result *biz.ModerationResult) *v1.ModerationResponse {
 	resp := &v1.ModerationResponse{
-		RequestId:   result.RequestID,
-		Action:      toProtoAction(result.Action),
-		Verdict:     toProtoVerdict(result.Verdict),
-		Reason:      result.Reason,
-		Categories:  result.Categories,
-		Scores:      result.Scores,
-		ProcessedAt: result.ProcessedAt.Unix(),
-	}
-
-	if resp.ProcessedAt == 0 {
-		resp.ProcessedAt = time.Now().Unix()
+		RequestId:  result.RequestID,
+		Action:     toProtoAction(result.Action),
+		Verdict:    toProtoVerdict(result.Verdict),
+		Reason:     result.Reason,
+		Categories: result.Categories,
+		Scores:     result.Scores,
 	}
 
 	return resp

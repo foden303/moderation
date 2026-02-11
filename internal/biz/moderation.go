@@ -90,97 +90,208 @@ func (uc *ModerationUsecase) ModerateText(ctx context.Context, requestID, conten
 		Scores:      make(map[string]float64),
 	}
 
-	// Determine action and verdict based on text moderation result
-	if textResult.IsClean {
-		result.Action = ModerationActionAutoApprove
-		result.Verdict = VerdictClean
-	} else if textResult.ShouldReject {
-		result.Action = ModerationActionAutoReject
-		result.Verdict = VerdictReject
-		result.Reason = "Content contains prohibited words"
-	} else if textResult.ShouldReview {
-		result.Action = ModerationActionPendingReview
-		result.Verdict = VerdictReview
-		result.Reason = "Content flagged for review"
-	} else {
-		result.Action = ModerationActionAutoApprove
-		result.Verdict = VerdictClean
-	}
-
-	// Add severity score
-	if textResult.MaxSeverity > 0 {
-		result.Scores["text_severity"] = float64(textResult.MaxSeverity)
-	}
+	uc.fillVerdict(result, textResult.ShouldReject, textResult.ShouldReview)
+	uc.fillScores(result, textResult, nil, nil)
 
 	return result, nil
 }
 
-// ModeratePost moderates a complete post (text + images).
-func (uc *ModerationUsecase) ModeratePost(ctx context.Context, requestID, content string, imageURLs []string) (*ModerationResult, error) {
-	uc.log.Debugf("ModeratePost: requestID=%s, contentLen=%d, images=%d", requestID, len(content), len(imageURLs))
+// ModerateImage moderates an image URL.
+func (uc *ModerationUsecase) ModerateImage(ctx context.Context, requestID, imageURL string) (*ModerationResult, error) {
+	uc.log.Debugf("ModerateImage: requestID=%s", requestID)
 
-	// First moderate text
-	textResult, err := uc.textModerator.Moderate(ctx, content)
+	imgResult, err := uc.imageModerator.ModerateImageURL(ctx, imageURL)
 	if err != nil {
 		return nil, err
 	}
 
 	result := &ModerationResult{
 		RequestID:   requestID,
-		IsClean:     textResult.IsClean,
-		Categories:  textResult.Categories,
+		IsClean:     imgResult.IsClean,
 		ProcessedAt: time.Now(),
-		TextResult:  textResult,
+		ImageResult: imgResult,
 		Scores:      make(map[string]float64),
 	}
 
-	// Add text severity score
-	if textResult.MaxSeverity > 0 {
-		result.Scores["text_severity"] = float64(textResult.MaxSeverity)
+	uc.fillVerdict(result, imgResult.ShouldReject, imgResult.ShouldReview)
+	uc.fillScores(result, nil, imgResult, nil)
+
+	return result, nil
+}
+
+// ModerateAudio moderates an audio URL.
+func (uc *ModerationUsecase) ModerateAudio(ctx context.Context, requestID, audioURL string) (*ModerationResult, error) {
+	uc.log.Debugf("ModerateAudio: requestID=%s (Not Implemented)", requestID)
+	// Audio moderation is temporarily disabled/not implemented
+	return &ModerationResult{
+		RequestID:   requestID,
+		IsClean:     true,
+		ProcessedAt: time.Now(),
+		Scores:      make(map[string]float64),
+		Action:      ModerationActionAutoApprove,
+		Verdict:     VerdictClean,
+	}, nil
+}
+
+// ModerateVideo moderates a video URL.
+func (uc *ModerationUsecase) ModerateVideo(ctx context.Context, requestID, videoURL string) (*ModerationResult, error) {
+	uc.log.Debugf("ModerateVideo: requestID=%s", requestID)
+
+	videoResult, err := uc.videoModerator.ModerateVideoURL(ctx, videoURL)
+	if err != nil {
+		return nil, err
 	}
 
-	// Moderate images if any
-	for i, url := range imageURLs {
-		imgResult, err := uc.imageModerator.ModerateImageURL(ctx, url)
-		if err != nil {
-			uc.log.Warnf("Failed to moderate image %d: %v", i, err)
-			continue
-		}
+	result := &ModerationResult{
+		RequestID:   requestID,
+		IsClean:     videoResult.IsClean,
+		ProcessedAt: time.Now(),
+		VideoResult: videoResult,
+		Scores:      make(map[string]float64),
+	}
 
-		if !imgResult.IsClean {
+	uc.fillVerdict(result, videoResult.ShouldReject, videoResult.ShouldReview)
+	uc.fillScores(result, nil, nil, videoResult)
+
+	return result, nil
+}
+
+// Moderate moderates a generic request with mixed content (text, images, video).
+// Audio is currently not implemented.
+func (uc *ModerationUsecase) Moderate(ctx context.Context, requestID, content string, imageURLs, audioURLs, videoURLs []string) (*ModerationResult, error) {
+	uc.log.Debugf("Moderate: requestID=%s, contentLen=%d, images=%d, videos=%d",
+		requestID, len(content), len(imageURLs), len(videoURLs))
+
+	result := &ModerationResult{
+		RequestID:   requestID,
+		IsClean:     true,
+		Scores:      make(map[string]float64),
+		ProcessedAt: time.Now(),
+	}
+
+	// 1. Moderate Text
+	if content != "" {
+		textResult, err := uc.textModerator.Moderate(ctx, content)
+		if err != nil {
+			return nil, err
+		}
+		result.TextResult = textResult
+		if !textResult.IsClean {
 			result.IsClean = false
-			// Merge image categories with result
-			for cat, score := range imgResult.Categories {
-				result.Scores[string(cat)] = score
+			result.Categories = append(result.Categories, textResult.Categories...)
+		}
+	}
+
+	// 2. Moderate Images
+	if len(imageURLs) > 0 {
+		// For simplicity, we just take the first bad result or the last result
+		// In a real system, we might want a list of image results
+		for _, url := range imageURLs {
+			imgResult, err := uc.imageModerator.ModerateImageURL(ctx, url)
+			if err != nil {
+				uc.log.Errorf("Failed to moderate image %s: %v", url, err)
+				continue
+			}
+			if !imgResult.IsClean {
+				result.IsClean = false
+				// Append categories...
+			}
+			// Keep the last result for detail returning (simplified)
+			result.ImageResult = imgResult
+			if imgResult.ShouldReject {
+				break // Fail fast on images? Or collect all? Let's generic fillVerdict handle it
 			}
 		}
-
-		if imgResult.ShouldReject {
-			result.IsClean = false
-		}
-
-		// Store the last image result (in production, would aggregate all)
-		result.ImageResult = imgResult
 	}
 
-	// Determine final action and verdict
-	if textResult.ShouldReject || (result.ImageResult != nil && result.ImageResult.ShouldReject) {
+	// if len(audioURLs) > 0 {
+	// for _, url := range audioURLs {
+	// 	audioResult, err := uc.audioModerator.ModerateAudioURL(ctx, url)
+	// 	if err != nil {
+	// 		uc.log.Errorf("Failed to moderate audio %s: %v", url, err)
+	// 		continue
+	// 	}
+	// 	if !audioResult.IsClean {
+	// 		result.IsClean = false
+	// 	}
+	// 	result.AudioResult = audioResult
+	// 	if audioResult.ShouldReject {
+	// 		break
+	// 	}
+	// }
+	// }
+
+	// 4. Moderate Video
+	if len(videoURLs) > 0 {
+		for _, url := range videoURLs {
+			vidResult, err := uc.videoModerator.ModerateVideoURL(ctx, url)
+			if err != nil {
+				uc.log.Errorf("Failed to moderate video %s: %v", url, err)
+				continue
+			}
+			if !vidResult.IsClean {
+				result.IsClean = false
+			}
+			result.VideoResult = vidResult
+			if vidResult.ShouldReject {
+				break
+			}
+		}
+	}
+
+	// Calculate final verdict
+	shouldReject := (result.TextResult != nil && result.TextResult.ShouldReject) ||
+		(result.ImageResult != nil && result.ImageResult.ShouldReject) ||
+		(result.VideoResult != nil && result.VideoResult.ShouldReject)
+
+	shouldReview := (result.TextResult != nil && result.TextResult.ShouldReview) ||
+		(result.ImageResult != nil && result.ImageResult.ShouldReview) ||
+		(result.VideoResult != nil && result.VideoResult.ShouldReview)
+
+	uc.fillVerdict(result, shouldReject, shouldReview)
+	uc.fillScores(result, result.TextResult, result.ImageResult, result.VideoResult)
+
+	return result, nil
+}
+
+// Helper to fill verdict and action
+func (uc *ModerationUsecase) fillVerdict(result *ModerationResult, shouldReject, shouldReview bool) {
+	if shouldReject {
 		result.Action = ModerationActionAutoReject
 		result.Verdict = VerdictReject
 		result.Reason = "Content rejected due to policy violation"
-	} else if textResult.ShouldReview || (result.ImageResult != nil && result.ImageResult.ShouldReview) {
+	} else if shouldReview {
 		result.Action = ModerationActionPendingReview
 		result.Verdict = VerdictReview
 		result.Reason = "Content flagged for manual review"
-	} else if result.IsClean {
+	} else {
 		result.Action = ModerationActionAutoApprove
 		result.Verdict = VerdictClean
-	} else {
-		result.Action = ModerationActionPendingReview
-		result.Verdict = VerdictReview
 	}
+}
 
-	return result, nil
+// Helper to fill scores
+func (uc *ModerationUsecase) fillScores(result *ModerationResult,
+	textRes *moderator.TextModerationResult,
+	imgRes *moderator.ImageModerationResult,
+	vidRes *moderator.VideoModerationResult) {
+
+	if textRes != nil && textRes.MaxSeverity > 0 {
+		result.Scores["text_severity"] = float64(textRes.MaxSeverity)
+	}
+	if imgRes != nil {
+		for cat, score := range imgRes.Categories {
+			result.Scores[string(cat)] = score
+		}
+	}
+	if vidRes != nil {
+		if vidRes.MaxNSFWScore > 0 {
+			result.Scores["video_nsfw"] = vidRes.MaxNSFWScore
+		}
+		if vidRes.MaxViolenceScore > 0 {
+			result.Scores["video_violence"] = vidRes.MaxViolenceScore
+		}
+	}
 }
 
 // RebuildFilters rebuilds all moderation filters from database.

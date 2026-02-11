@@ -77,13 +77,13 @@ func TestOllamaClient_ModerateText_Unsafe(t *testing.T) {
 		t.Errorf("Expected 2 violated categories, got %d", len(result.ViolatedCategories))
 	}
 
-	// Check categories
+	// Check categories (Ollama parser still uses S-prefix codes)
 	hasS1, hasS9 := false, false
 	for _, cat := range result.ViolatedCategories {
-		if cat == CategoryViolentCrimes {
+		if cat == GuardCategory("S1") {
 			hasS1 = true
 		}
-		if cat == CategoryHateSpeech {
+		if cat == GuardCategory("S9") {
 			hasS9 = true
 		}
 	}
@@ -133,9 +133,9 @@ func TestCategoryDescription(t *testing.T) {
 		cat      GuardCategory
 		expected string
 	}{
-		{CategoryViolentCrimes, "Violent Crimes"},
-		{CategoryHateSpeech, "Hate Speech"},
-		{CategorySexualContent, "Sexual Content"},
+		{CategoryViolent, "Violent"},
+		{CategorySuicide, "Suicide & Self-Harm"},
+		{CategorySexualContent, "Sexual Content or Sexual Acts"},
 		{GuardCategory("UNKNOWN"), "UNKNOWN"},
 	}
 
