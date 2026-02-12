@@ -167,78 +167,78 @@ func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModera
 	if text == "" {
 		return result, nil
 	}
-	// step 1: normalize text
-	normalizedText := filter.NormalizeText(text)
-	// step 2: Bloom Fast Prefilter (optional)
+	// // step 1: normalize text
+	// normalizedText := filter.NormalizeText(text)
+	// // step 2: Bloom Fast Prefilter (optional)
 
-	hasPotentialMatch := false
-	if tm.bloomFilter != nil {
-		hashed := hash.FastHash(normalizedText)
-		exists, err := tm.bloomFilter.ExistsWithCtx(ctx, hashed)
-		if err != nil {
-			return nil, err
-		}
-		hasPotentialMatch = exists
-	}
-	// step 3: Pattern Matching (ALWAYS RUN)
-	matches := tm.ahoCorasick.Search(normalizedText)
+	// hasPotentialMatch := false
+	// if tm.bloomFilter != nil {
+	// 	hashed := hash.FastHash(normalizedText)
+	// 	exists, err := tm.bloomFilter.ExistsWithCtx(ctx, hashed)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	hasPotentialMatch = exists
+	// }
+	// // step 3: Pattern Matching (ALWAYS RUN)
+	// matches := tm.ahoCorasick.Search(normalizedText)
 
-	if len(matches) > 0 {
-		result.IsClean = false
-		result.Matches = matches
+	// if len(matches) > 0 {
+	// 	result.IsClean = false
+	// 	result.Matches = matches
 
-		categorySet := make(map[string]struct{})
+	// 	categorySet := make(map[string]struct{})
 
-		for _, m := range matches {
-			if m.NsfwScore > result.MaxNsfwScore {
-				result.MaxNsfwScore = m.NsfwScore
-			}
-			categorySet[m.Category] = struct{}{}
-		}
+	// 	for _, m := range matches {
+	// 		if m.NsfwScore > result.MaxNsfwScore {
+	// 			result.MaxNsfwScore = m.NsfwScore
+	// 		}
+	// 		categorySet[m.Category] = struct{}{}
+	// 	}
 
-		for c := range categorySet {
-			result.Categories = append(result.Categories, c)
-		}
-	}
+	// 	for c := range categorySet {
+	// 		result.Categories = append(result.Categories, c)
+	// 	}
+	// }
 
-	needModel := true
-	if result.MaxNsfwScore >= tm.rejectThreshold {
-		needModel = false
-	}
+	// needModel := true
+	// if result.MaxNsfwScore >= tm.rejectThreshold {
+	// 	needModel = false
+	// }
 
-	if tm.nsfwTextClient != nil && needModel {
+	// if tm.nsfwTextClient != nil && needModel {
 
-		resp, err := tm.nsfwTextClient.Predict(ctx, text)
-		if err == nil {
+	// 	resp, err := tm.nsfwTextClient.Predict(ctx, text)
+	// 	if err == nil {
 
-			result.NSFWChecked = true
+	// 		result.NSFWChecked = true
 
-			if resp.IsNsfw {
+	// 		if resp.IsNsfw {
 
-				result.IsClean = false
-				result.DetectedByNSFW = true
+	// 			result.IsClean = false
+	// 			result.DetectedByNSFW = true
 
-				result.Categories = mergeCategories(result.Categories, resp.Categories)
+	// 			result.Categories = mergeCategories(result.Categories, resp.Categories)
 
-				switch strings.ToLower(resp.SafetyLabel) {
-				case "unsafe":
-					result.ShouldReject = true
-				case "controversial":
-					result.ShouldReview = true
-				}
+	// 			switch strings.ToLower(resp.SafetyLabel) {
+	// 			case "unsafe":
+	// 				result.ShouldReject = true
+	// 			case "controversial":
+	// 				result.ShouldReview = true
+	// 			}
 
-				result.DetectedPhrases = append(result.DetectedPhrases, text)
+	// 			result.DetectedPhrases = append(result.DetectedPhrases, text)
 
-				tm.enqueueFeedback(text, resp.Categories)
-			}
-		}
-	}
-	// step 4: Final decision from pattern severity
-	if result.MaxNsfwScore >= tm.rejectThreshold {
-		result.ShouldReject = true
-	} else if result.MaxNsfwScore >= tm.reviewThreshold {
-		result.ShouldReview = true
-	}
+	// 			tm.enqueueFeedback(text, resp.Categories)
+	// 		}
+	// 	}
+	// }
+	// // step 4: Final decision from pattern severity
+	// if result.MaxNsfwScore >= tm.rejectThreshold {
+	// 	result.ShouldReject = true
+	// } else if result.MaxNsfwScore >= tm.reviewThreshold {
+	// 	result.ShouldReview = true
+	// }
 
 	return result, nil
 }
