@@ -8,7 +8,6 @@ option go_package = "moderation/api/moderation/v1;v1";
 option java_multiple_files = true;
 option java_package = "moderation.v1";
 option objc_class_prefix = "APImoderationV1";
-
 // AdminService provides admin operations for moderation.
 service AdminService {
   // AddBadWord adds a word to the blocklist.
@@ -47,8 +46,9 @@ service AdminService {
 message AddBadWordRequest {
   string word = 1;
   string category = 2;
-  int32 severity = 3;
-  string added_by = 4;
+  double nsfw_score = 3;
+  optional string added_by = 4;
+  optional string model_version = 5;
 }
 
 message AddBadWordResponse {
@@ -77,9 +77,9 @@ message ListBadWordsResponse {
 message BadWordEntry {
   string word = 1;
   string category = 2;
-  int32 severity = 3;
-  string added_by = 4;
-  int64 added_at = 5;
+  double nsfw_score = 3;
+  optional string added_by = 4;
+  optional string model_version = 5;
 }
 
 message RebuildBloomFilterRequest {}

@@ -1,7 +1,7 @@
 # Docker Compose for local development
 # Only infrastructure services (Redis, PostgreSQL, vLLM, NSFW Detector)
 # The moderation server runs via VS Code debugger
-
+name: moderation
 services:
   # PostgreSQL Database
   postgres:
@@ -32,43 +32,31 @@ services:
     networks:
       - moderation-network
 
-  # vLLM - High Performance LLM Server (Llama Guard)
-  vllm:
-    image: vllm/vllm-openai:latest
-    container_name: vllm-server
+  # NSFW Image Detector with Ray Serve + gRPC (new implementation)
+  nsfw-image:
+    build:
+      context: ./deployments/nsfw_image
+      dockerfile: Dockerfile
+    container_name: moderation-nsfw-image
     ports:
-      - "8000:8000"
-    volumes:
-      - ./tmp/vllm_cache:/root/.cache/huggingface
+      - "50051:50051"  # gRPC
+      - "8265:8265"    # Ray dashboard
     environment:
-      - HF_TOKEN=${HF_TOKEN:-}
-    command: >
-      --model Qwen/Qwen3Guard-Gen-0.6B
-      --host 0.0.0.0
-      --port 8000
-      --tensor-parallel-size 1
-      --max-model-len 4096
-      --gpu-memory-utilization 0.9
+      - PYTHONUNBUFFERED=1
     gpus: all
     # restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
     networks:
       - moderation-network
 
-  # NSFW Image Detector with Ray Serve + gRPC (new implementation)
-  nsfw-detector:
+  # NSFW Text Detector with Ray Serve + gRPC (Qwen3Guard-Gen-0.6B)
+  nsfw-text:
     build:
-      context: ./deployments/nsfw_detector
+      context: ./deployments/nsfw_text
       dockerfile: Dockerfile
-    container_name: nsfw-detector
+    container_name: moderation-nsfw-text
     ports:
-      - "50051:50051"  # gRPC
-      - "8265:8265"    # Ray dashboard (optional)
+      - "50052:50052"  # gRPC
+      - "8266:8265"    # Ray dashboard (mapped to 8266 to avoid conflict)
     environment:
       - PYTHONUNBUFFERED=1
     gpus: all

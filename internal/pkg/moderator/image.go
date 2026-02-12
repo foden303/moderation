@@ -67,7 +67,7 @@ func DefaultImageModeratorConfig() ImageModeratorConfig {
 		Timeout:           10 * time.Second,
 		BloomBits:         1 << 20, // ~1M bits = 128KB
 		BloomHashFuncs:    7,
-		BloomKey:          "moderation:image:bloom",
+		BloomKey:          "moderation:bloom:image",
 	}
 }
 
@@ -85,7 +85,7 @@ type LocalImageModerator struct {
 	textModerator   *TextModerator
 	bloomFilter     *bloom.Filter
 	hasher          *hash.PerceptualHasher
-	nsfwClient      *nsfw.GRPCClient
+	nsfwClient      *nsfw.ImageClient
 	badImageChecker BadImageChecker
 	log             *log.Helper
 }
@@ -95,7 +95,7 @@ func NewLocalImageModerator(
 	config ImageModeratorConfig,
 	textMod *TextModerator,
 	redisCache redis.Cache,
-	nsfwClient *nsfw.GRPCClient,
+	nsfwClient *nsfw.ImageClient,
 	badImageChecker BadImageChecker,
 	logger log.Logger,
 ) *LocalImageModerator {

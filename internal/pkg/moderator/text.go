@@ -8,7 +8,8 @@ import (
 
 	"moderation/internal/pkg/bloom"
 	"moderation/internal/pkg/filter"
-	"moderation/internal/pkg/llm"
+	"moderation/internal/pkg/hash"
+	"moderation/internal/pkg/nsfw"
 	"moderation/internal/pkg/redis"
 )
 
@@ -16,31 +17,29 @@ import (
 type TextModerationResult struct {
 	IsClean         bool
 	Matches         []filter.AhoCorasickMatch
-	MaxSeverity     int32
+	MaxNsfwScore    float64
 	Categories      []string
 	ShouldReject    bool
 	ShouldReview    bool
-	LLMChecked      bool
-	LLMCategories   []llm.GuardCategory
-	DetectedByLLM   bool
-	DetectedPhrases []string // Phrases detected by LLM for feedback
+	NSFWChecked     bool     // Whether NSFW text model was called
+	DetectedByNSFW  bool     // Whether NSFW model flagged it
+	DetectedPhrases []string // Phrases detected for feedback
 }
 
-// FeedbackCallback is called when LLM detects new bad content.
+// FeedbackCallback is called when NSFW model detects new bad content.
 // This allows saving to DB and updating filters.
-type FeedbackCallback func(ctx context.Context, phrase string, categories []llm.GuardCategory) error
+type FeedbackCallback func(ctx context.Context, phrase string, categories []string) error
 
 // TextModerator provides text content moderation.
 type TextModerator struct {
-	bloomFilter *bloom.Filter
-	ahoCorasick *filter.AhoCorasick
-	vllmClient  *llm.VLLMClient
-	mu          sync.RWMutex
+	bloomFilter    *bloom.Filter
+	ahoCorasick    *filter.AhoCorasick
+	nsfwTextClient *nsfw.TextClient
+	mu             sync.RWMutex
 
 	// Configuration
-	rejectThreshold int32 // Severity threshold for auto-reject
-	reviewThreshold int32 // Severity threshold for manual review
-	enableLLM       bool  // Whether to use LLM for secondary check
+	rejectThreshold float64 // Severity threshold for auto-reject
+	reviewThreshold float64 // Severity threshold for manual review
 
 	// Feedback callback for learning
 	feedbackCallback FeedbackCallback
@@ -51,12 +50,8 @@ type TextModeratorConfig struct {
 	BloomBits          uint
 	BloomHashFunctions uint
 	BloomKey           string
-	RejectThreshold    int32
-	ReviewThreshold    int32
-	EnableLLM          bool
-	VLLMBaseURL        string
-	VLLMModel          string
-	VLLMTimeout        time.Duration
+	RejectThreshold    float64
+	ReviewThreshold    float64
 }
 
 // DefaultTextModeratorConfig returns default configuration.
@@ -65,35 +60,21 @@ func DefaultTextModeratorConfig() TextModeratorConfig {
 		BloomBits:          1024 * 1024 * 8, // 8 million bits = 1MB
 		BloomHashFunctions: 5,
 		BloomKey:           "moderation:bloom:badwords",
-		RejectThreshold:    3,
-		ReviewThreshold:    2,
-		EnableLLM:          true,
-		VLLMBaseURL:        "http://localhost:8000",
-		VLLMModel:          "Qwen/Qwen3Guard-Gen-0.6B",
-		VLLMTimeout:        30 * time.Second,
+		RejectThreshold:    0.85,
+		ReviewThreshold:    0.5,
 	}
 }
 
 // NewTextModerator creates a new TextModerator.
-func NewTextModerator(redisCache redis.Cache, config TextModeratorConfig) *TextModerator {
-	tm := &TextModerator{
+// nsfwTextClient can be nil if text NSFW detection is disabled.
+func NewTextModerator(redisCache redis.Cache, config TextModeratorConfig, nsfwTextClient *nsfw.TextClient) *TextModerator {
+	return &TextModerator{
 		bloomFilter:     bloom.NewBloomFilter(redisCache, config.BloomKey, config.BloomBits, config.BloomHashFunctions),
 		ahoCorasick:     filter.NewAhoCorasick(),
+		nsfwTextClient:  nsfwTextClient,
 		rejectThreshold: config.RejectThreshold,
 		reviewThreshold: config.ReviewThreshold,
-		enableLLM:       config.EnableLLM,
 	}
-
-	// Initialize vLLM client if LLM is enabled
-	if config.EnableLLM && config.VLLMBaseURL != "" {
-		tm.vllmClient = llm.NewVLLMClient(llm.VLLMConfig{
-			BaseURL: config.VLLMBaseURL,
-			Model:   config.VLLMModel,
-			Timeout: config.VLLMTimeout,
-		})
-	}
-
-	return tm
 }
 
 // SetFeedbackCallback sets the callback for learning new bad phrases.
@@ -105,9 +86,9 @@ func (tm *TextModerator) SetFeedbackCallback(cb FeedbackCallback) {
 
 // BadWord represents a bad word with metadata.
 type BadWord struct {
-	Word     string
-	Category string
-	Severity int32
+	Word      string
+	Category  string
+	NsfwScore float64
 }
 
 // RebuildFilters rebuilds both bloom filter and Aho-Corasick from the word list.
@@ -119,18 +100,32 @@ func (tm *TextModerator) RebuildFilters(ctx context.Context, words []BadWord) er
 	patterns := make([]filter.PatternInfo, len(words))
 	for i, w := range words {
 		patterns[i] = filter.PatternInfo{
-			Word:     w.Word,
-			Category: w.Category,
-			Severity: w.Severity,
+			Word:      w.Word,
+			Category:  w.Category,
+			NsfwScore: w.NsfwScore,
 		}
 	}
 	tm.ahoCorasick.Build(patterns)
 
 	// Add words to bloom filter
 	for _, w := range words {
+		// Add full phrase
 		normalizedWord := filter.NormalizeText(w.Word)
-		if err := tm.bloomFilter.AddWithCtx(ctx, []byte(normalizedWord)); err != nil {
+		hashedWord := hash.HashTextSha256(normalizedWord)
+		if err := tm.bloomFilter.AddWithCtx(ctx, []byte(hashedWord)); err != nil {
 			return err
+		}
+
+		// Add constituent tokens if it's a phrase
+		tokens := tokenize(w.Word)
+		if len(tokens) > 1 {
+			for _, token := range tokens {
+				normToken := filter.NormalizeText(token)
+				hashedToken := hash.HashTextSha256(normToken)
+				if err := tm.bloomFilter.AddWithCtx(ctx, []byte(hashedToken)); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -139,107 +134,110 @@ func (tm *TextModerator) RebuildFilters(ctx context.Context, words []BadWord) er
 
 // AddWord adds a single word to the filters.
 func (tm *TextModerator) AddWord(ctx context.Context, word BadWord) error {
+	// Add full phrase
 	normalizedWord := filter.NormalizeText(word.Word)
-	return tm.bloomFilter.AddWithCtx(ctx, []byte(normalizedWord))
+	hashedWord := hash.HashTextSha256(normalizedWord)
+	if err := tm.bloomFilter.AddWithCtx(ctx, []byte(hashedWord)); err != nil {
+		return err
+	}
+
+	// Add constituent tokens if it's a phrase
+	tokens := tokenize(word.Word)
+	if len(tokens) > 1 {
+		for _, token := range tokens {
+			normToken := filter.NormalizeText(token)
+			hashedToken := hash.HashTextSha256(normToken)
+			if err := tm.bloomFilter.AddWithCtx(ctx, []byte(hashedToken)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-// Moderate checks text content for bad words with LLM fallback.
+// Moderate checks text content for bad words with NSFW model fallback.
 func (tm *TextModerator) Moderate(ctx context.Context, text string) (*TextModerationResult, error) {
 	result := &TextModerationResult{
 		IsClean:         true,
 		Matches:         make([]filter.AhoCorasickMatch, 0),
 		Categories:      make([]string, 0),
-		LLMCategories:   make([]llm.GuardCategory, 0),
 		DetectedPhrases: make([]string, 0),
 	}
 
 	if text == "" {
 		return result, nil
 	}
+	// step 1: normalize text
+	normalizedText := filter.NormalizeText(text)
+	// step 2: Bloom Fast Prefilter (optional)
 
-	// step 1: Fast Bloom Filter Check
-	words := tokenize(text)
 	hasPotentialMatch := false
-
-	for _, word := range words {
-		normalizedWord := filter.NormalizeText(word)
-		exists, err := tm.bloomFilter.ExistsWithCtx(ctx, []byte(normalizedWord))
+	if tm.bloomFilter != nil {
+		hashed := hash.FastHash(normalizedText)
+		exists, err := tm.bloomFilter.ExistsWithCtx(ctx, hashed)
 		if err != nil {
 			return nil, err
 		}
-		if exists {
-			hasPotentialMatch = true
-			break
+		hasPotentialMatch = exists
+	}
+	// step 3: Pattern Matching (ALWAYS RUN)
+	matches := tm.ahoCorasick.Search(normalizedText)
+
+	if len(matches) > 0 {
+		result.IsClean = false
+		result.Matches = matches
+
+		categorySet := make(map[string]struct{})
+
+		for _, m := range matches {
+			if m.NsfwScore > result.MaxNsfwScore {
+				result.MaxNsfwScore = m.NsfwScore
+			}
+			categorySet[m.Category] = struct{}{}
+		}
+
+		for c := range categorySet {
+			result.Categories = append(result.Categories, c)
 		}
 	}
 
-	// step 2: Precise Aho-Corasick Matching
-	if hasPotentialMatch {
-		matches := tm.ahoCorasick.Search(text)
+	needModel := true
+	if result.MaxNsfwScore >= tm.rejectThreshold {
+		needModel = false
+	}
 
-		if len(matches) > 0 {
-			result.IsClean = false
-			result.Matches = matches
+	if tm.nsfwTextClient != nil && needModel {
 
-			// Calculate max severity and collect categories
-			categorySet := make(map[string]struct{})
-			for _, match := range matches {
-				if match.Severity > result.MaxSeverity {
-					result.MaxSeverity = match.Severity
+		resp, err := tm.nsfwTextClient.Predict(ctx, text)
+		if err == nil {
+
+			result.NSFWChecked = true
+
+			if resp.IsNsfw {
+
+				result.IsClean = false
+				result.DetectedByNSFW = true
+
+				result.Categories = mergeCategories(result.Categories, resp.Categories)
+
+				switch strings.ToLower(resp.SafetyLabel) {
+				case "unsafe":
+					result.ShouldReject = true
+				case "controversial":
+					result.ShouldReview = true
 				}
-				categorySet[match.Category] = struct{}{}
-			}
 
-			for cat := range categorySet {
-				result.Categories = append(result.Categories, cat)
-			}
+				result.DetectedPhrases = append(result.DetectedPhrases, text)
 
-			// Determine action based on severity
-			if result.MaxSeverity >= tm.rejectThreshold {
-				result.ShouldReject = true
-			} else if result.MaxSeverity >= tm.reviewThreshold {
-				result.ShouldReview = true
+				tm.enqueueFeedback(text, resp.Categories)
 			}
-
-			return result, nil // Fast path - pattern matched
 		}
 	}
-
-	// step 3: LLM deep analysis via vLLM + Qwen3Guard (if enabled)
-	if tm.enableLLM && tm.vllmClient != nil {
-		llmResult, err := tm.vllmClient.ModerateText(ctx, text)
-		if err != nil {
-			// LLM failed, but we continue with pattern-only result
-			return result, nil
-		}
-
-		result.LLMChecked = true
-
-		if !llmResult.IsSafe {
-			result.IsClean = false
-			result.DetectedByLLM = true
-			result.LLMCategories = llmResult.ViolatedCategories
-
-			// Qwen3Guard 3-tier severity: Unsafe → reject, Controversial → review
-			switch llmResult.Severity {
-			case llm.SeverityUnsafe:
-				result.ShouldReject = true
-			case llm.SeverityControversial:
-				result.ShouldReview = true
-			}
-
-			// Extract phrases for feedback
-			result.DetectedPhrases = append(result.DetectedPhrases, text)
-
-			// step 4: Feedback loop - learn & store
-			if tm.feedbackCallback != nil {
-				go func() {
-					feedbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-					defer cancel()
-					tm.feedbackCallback(feedbackCtx, text, llmResult.ViolatedCategories)
-				}()
-			}
-		}
+	// step 4: Final decision from pattern severity
+	if result.MaxNsfwScore >= tm.rejectThreshold {
+		result.ShouldReject = true
+	} else if result.MaxNsfwScore >= tm.reviewThreshold {
+		result.ShouldReview = true
 	}
 
 	return result, nil

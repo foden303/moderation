@@ -19,12 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ModerationService_Moderate_FullMethodName        = "/moderation.v1.ModerationService/Moderate"
-	ModerationService_ModerateContent_FullMethodName = "/moderation.v1.ModerationService/ModerateContent"
-	ModerationService_ModerateImage_FullMethodName   = "/moderation.v1.ModerationService/ModerateImage"
-	ModerationService_ModerateVideo_FullMethodName   = "/moderation.v1.ModerationService/ModerateVideo"
-	ModerationService_ModerateAudio_FullMethodName   = "/moderation.v1.ModerationService/ModerateAudio"
-	ModerationService_BatchModerate_FullMethodName   = "/moderation.v1.ModerationService/BatchModerate"
+	ModerationService_Moderate_FullMethodName      = "/moderation.v1.ModerationService/Moderate"
+	ModerationService_ModerateText_FullMethodName  = "/moderation.v1.ModerationService/ModerateText"
+	ModerationService_ModerateImage_FullMethodName = "/moderation.v1.ModerationService/ModerateImage"
+	ModerationService_ModerateVideo_FullMethodName = "/moderation.v1.ModerationService/ModerateVideo"
+	ModerationService_ModerateAudio_FullMethodName = "/moderation.v1.ModerationService/ModerateAudio"
+	ModerationService_BatchModerate_FullMethodName = "/moderation.v1.ModerationService/BatchModerate"
 )
 
 // ModerationServiceClient is the client API for ModerationService service.
@@ -34,8 +34,8 @@ const (
 // ModerationService provides content moderation for posts and comments.
 type ModerationServiceClient interface {
 	Moderate(ctx context.Context, in *ModerateRequest, opts ...grpc.CallOption) (*ModerationResponse, error)
-	// ModerateContent checks a content for harmful content.
-	ModerateContent(ctx context.Context, in *ModerateContentRequest, opts ...grpc.CallOption) (*ModerationResponse, error)
+	// ModerateText checks a text for harmful content.
+	ModerateText(ctx context.Context, in *ModerateTextRequest, opts ...grpc.CallOption) (*ModerationResponse, error)
 	// ModerateImage checks an image for harmful content.
 	ModerateImage(ctx context.Context, in *ModerateImageRequest, opts ...grpc.CallOption) (*ModerationResponse, error)
 	// ModerateVideo checks an video for harmful content.
@@ -64,10 +64,10 @@ func (c *moderationServiceClient) Moderate(ctx context.Context, in *ModerateRequ
 	return out, nil
 }
 
-func (c *moderationServiceClient) ModerateContent(ctx context.Context, in *ModerateContentRequest, opts ...grpc.CallOption) (*ModerationResponse, error) {
+func (c *moderationServiceClient) ModerateText(ctx context.Context, in *ModerateTextRequest, opts ...grpc.CallOption) (*ModerationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ModerationResponse)
-	err := c.cc.Invoke(ctx, ModerationService_ModerateContent_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ModerationService_ModerateText_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +121,8 @@ func (c *moderationServiceClient) BatchModerate(ctx context.Context, in *BatchMo
 // ModerationService provides content moderation for posts and comments.
 type ModerationServiceServer interface {
 	Moderate(context.Context, *ModerateRequest) (*ModerationResponse, error)
-	// ModerateContent checks a content for harmful content.
-	ModerateContent(context.Context, *ModerateContentRequest) (*ModerationResponse, error)
+	// ModerateText checks a text for harmful content.
+	ModerateText(context.Context, *ModerateTextRequest) (*ModerationResponse, error)
 	// ModerateImage checks an image for harmful content.
 	ModerateImage(context.Context, *ModerateImageRequest) (*ModerationResponse, error)
 	// ModerateVideo checks an video for harmful content.
@@ -144,8 +144,8 @@ type UnimplementedModerationServiceServer struct{}
 func (UnimplementedModerationServiceServer) Moderate(context.Context, *ModerateRequest) (*ModerationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Moderate not implemented")
 }
-func (UnimplementedModerationServiceServer) ModerateContent(context.Context, *ModerateContentRequest) (*ModerationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ModerateContent not implemented")
+func (UnimplementedModerationServiceServer) ModerateText(context.Context, *ModerateTextRequest) (*ModerationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ModerateText not implemented")
 }
 func (UnimplementedModerationServiceServer) ModerateImage(context.Context, *ModerateImageRequest) (*ModerationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ModerateImage not implemented")
@@ -198,20 +198,20 @@ func _ModerationService_Moderate_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ModerationService_ModerateContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ModerateContentRequest)
+func _ModerationService_ModerateText_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModerateTextRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ModerationServiceServer).ModerateContent(ctx, in)
+		return srv.(ModerationServiceServer).ModerateText(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ModerationService_ModerateContent_FullMethodName,
+		FullMethod: ModerationService_ModerateText_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ModerationServiceServer).ModerateContent(ctx, req.(*ModerateContentRequest))
+		return srv.(ModerationServiceServer).ModerateText(ctx, req.(*ModerateTextRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -300,8 +300,8 @@ var ModerationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ModerationService_Moderate_Handler,
 		},
 		{
-			MethodName: "ModerateContent",
-			Handler:    _ModerationService_ModerateContent_Handler,
+			MethodName: "ModerateText",
+			Handler:    _ModerationService_ModerateText_Handler,
 		},
 		{
 			MethodName: "ModerateImage",

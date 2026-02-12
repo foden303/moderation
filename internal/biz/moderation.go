@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"moderation/internal/pkg/hash"
 	"moderation/internal/pkg/moderator"
 
 	"github.com/go-kratos/kratos/v2/log"
@@ -46,12 +47,47 @@ const (
 	VerdictReview
 )
 
+type TextCacheCategory string
+
+const (
+	TextCacheCategorySafe          TextCacheCategory = "safe"
+	TextCacheCategoryUnsafe        TextCacheCategory = "unsafe"
+	TextCacheCategoryControversial TextCacheCategory = "controversial"
+)
+
+func (c TextCacheCategory) String() string {
+	return string(c)
+}
+
+type ImageCacheCategory string
+
+const (
+	ImageCacheCategorySafe   ImageCacheCategory = "safe"
+	ImageCacheCategoryUnsafe ImageCacheCategory = "unsafe"
+)
+
+func (i ImageCacheCategory) String() string {
+	return string(i)
+}
+
+type ModelVersion string
+
+const (
+	ModelVersionText  ModelVersion = "Qwen/Qwen3Guard-Gen-0.6B"
+	ModelVersionImage ModelVersion = "Falconsai/nsfw_image_detection"
+)
+
+func (m ModelVersion) String() string {
+	return string(m)
+}
+
 // ModerationUsecase orchestrates content moderation.
 type ModerationUsecase struct {
 	textModerator  *moderator.TextModerator
 	imageModerator *moderator.LocalImageModerator
 	videoModerator *moderator.LocalVideoModerator
-	badwordRepo    BadwordRepo
+	textCache      TextCacheRepo
+	imageCache     ImageCacheRepo
 	log            *log.Helper
 }
 
@@ -60,23 +96,102 @@ func NewModerationUsecase(
 	textMod *moderator.TextModerator,
 	imgMod *moderator.LocalImageModerator,
 	videoMod *moderator.LocalVideoModerator,
-	repo BadwordRepo,
+	textCache TextCacheRepo,
+	imageCache ImageCacheRepo,
 	logger log.Logger,
 ) *ModerationUsecase {
 	return &ModerationUsecase{
 		textModerator:  textMod,
 		imageModerator: imgMod,
 		videoModerator: videoMod,
-		badwordRepo:    repo,
+		textCache:      textCache,
+		imageCache:     imageCache,
 		log:            log.NewHelper(logger),
 	}
 }
 
-// ModerateText moderates text content.
-func (uc *ModerationUsecase) ModerateText(ctx context.Context, requestID, content string) (*ModerationResult, error) {
-	uc.log.Debugf("ModerateText: requestID=%s, contentLen=%d", requestID, len(content))
+// RebuildFilters rebuilds all moderation filters from database.
+func (uc *ModerationUsecase) RebuildFilters(ctx context.Context) (int, error) {
+	uc.log.Info("Rebuilding moderation filters from database")
 
-	textResult, err := uc.textModerator.Moderate(ctx, content)
+	// Get all bad words from database (TextCache)
+	caches, err := uc.textCache.ListAll(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	// Filter for only unsafe items if cache contains mixed results
+	var words []moderator.BadWord
+	for _, c := range caches {
+		if c.Category != "safe" {
+			words = append(words, moderator.BadWord{
+				Word:      c.NormalizedContent,
+				Category:  c.Category,
+				NsfwScore: c.NSFWScore,
+			})
+		}
+	}
+
+	// Rebuild text moderator filters
+	if err := uc.textModerator.RebuildFilters(ctx, words); err != nil {
+		return 0, err
+	}
+
+	uc.log.Infof("Rebuilt moderation filters with %d words", len(words))
+	return len(words), nil
+}
+
+// AddBadWord adds a new bad word and updates filters.
+func (uc *ModerationUsecase) AddBadWord(ctx context.Context, word, category string, nsfwScore float64, addedBy, modelVersion *string) error {
+	if nsfwScore < 0 || nsfwScore > 1 {
+		nsfwScore = 1.0
+	}
+	// Add to text moderator bloom filter
+	// Map nsfwScore to severity (int32). Assuming user provides compatible values or we trunacate.
+	if err := uc.textModerator.AddWord(ctx, moderator.BadWord{
+		Word:      word,
+		Category:  category,
+		NsfwScore: nsfwScore,
+	}); err != nil {
+		return err
+	}
+
+	// Add to TextCache (permanent storage via nil expiry)
+	return uc.textCache.Upsert(ctx, &TextCache{
+		ContentHash:       hash.HashTextSha256(word),
+		NormalizedContent: word,
+		Category:          category,
+		NSFWScore:         nsfwScore,
+		ModelVersion:      uc.defaultModelVersion(modelVersion),
+		AddedBy:           uc.defaultAddedBy(addedBy),
+		ExpiresAt:         nil, // Permanent
+		DetectResult:      []byte("{}"),
+	})
+}
+
+// ListBadWords lists bad words from cache.
+func (uc *ModerationUsecase) ListBadWords(ctx context.Context, category string, limit, offset int32) ([]*TextCache, int64, error) {
+	caches, err := uc.textCache.List(ctx, category, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := uc.textCache.Count(ctx, category)
+	if err != nil {
+		return nil, 0, err
+	}
+	return caches, total, nil
+}
+
+// RemoveBadWord removes a bad word.
+func (uc *ModerationUsecase) RemoveBadWord(ctx context.Context, word string) error {
+	return uc.textCache.Delete(ctx, hash.HashTextSha256(word))
+}
+
+// ModerateText moderates text content.
+func (uc *ModerationUsecase) ModerateText(ctx context.Context, requestID, text string) (*ModerationResult, error) {
+	uc.log.Debugf("ModerateText: requestID=%s, contentLen=%d", requestID, len(text))
+
+	textResult, err := uc.textModerator.Moderate(ctx, text)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +212,8 @@ func (uc *ModerationUsecase) ModerateText(ctx context.Context, requestID, conten
 }
 
 // ModerateImage moderates an image URL.
-func (uc *ModerationUsecase) ModerateImage(ctx context.Context, requestID, imageURL string) (*ModerationResult, error) {
-	uc.log.Debugf("ModerateImage: requestID=%s", requestID)
+func (uc *ModerationUsecase) ModerateImage(ctx context.Context, requestID, ownerID, imageURL string) (*ModerationResult, error) {
+	uc.log.Debugf("ModerateImage: requestID=%s, ownerID=%s", requestID, ownerID)
 
 	imgResult, err := uc.imageModerator.ModerateImageURL(ctx, imageURL)
 	if err != nil {
@@ -276,8 +391,8 @@ func (uc *ModerationUsecase) fillScores(result *ModerationResult,
 	imgRes *moderator.ImageModerationResult,
 	vidRes *moderator.VideoModerationResult) {
 
-	if textRes != nil && textRes.MaxSeverity > 0 {
-		result.Scores["text_severity"] = float64(textRes.MaxSeverity)
+	if textRes != nil && textRes.MaxNsfwScore > 0 {
+		result.Scores["text_nsfw"] = textRes.MaxNsfwScore
 	}
 	if imgRes != nil {
 		for cat, score := range imgRes.Categories {
@@ -294,41 +409,18 @@ func (uc *ModerationUsecase) fillScores(result *ModerationResult,
 	}
 }
 
-// RebuildFilters rebuilds all moderation filters from database.
-func (uc *ModerationUsecase) RebuildFilters(ctx context.Context) (int, error) {
-	uc.log.Info("Rebuilding moderation filters from database")
-
-	// Get all bad words from database
-	badwords, err := uc.badwordRepo.ListAll(ctx)
-	if err != nil {
-		return 0, err
+// defaultAddedBy returns the default addedBy value if nil
+func (uc *ModerationUsecase) defaultAddedBy(addedBy *string) string {
+	if addedBy == nil {
+		return "manual"
 	}
-
-	// Convert to moderator.BadWord
-	words := make([]moderator.BadWord, len(badwords))
-	for i, bw := range badwords {
-		words[i] = moderator.BadWord{
-			Word:     bw.Word,
-			Category: bw.Category,
-			Severity: bw.Severity,
-		}
-	}
-
-	// Rebuild text moderator filters
-	if err := uc.textModerator.RebuildFilters(ctx, words); err != nil {
-		return 0, err
-	}
-
-	uc.log.Infof("Rebuilt moderation filters with %d words", len(words))
-	return len(words), nil
+	return *addedBy
 }
 
-// AddBadWord adds a new bad word and updates filters.
-func (uc *ModerationUsecase) AddBadWord(ctx context.Context, word, category, addedBy string, severity int32) error {
-	// Add to text moderator bloom filter
-	return uc.textModerator.AddWord(ctx, moderator.BadWord{
-		Word:     word,
-		Category: category,
-		Severity: severity,
-	})
+// defaultModelVersion returns the default model version if nil
+func (uc *ModerationUsecase) defaultModelVersion(modelVersion *string) string {
+	if modelVersion == nil {
+		return ModelVersionText.String()
+	}
+	return *modelVersion
 }

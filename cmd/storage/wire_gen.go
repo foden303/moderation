@@ -7,15 +7,16 @@
 package main
 
 import (
+	"github.com/go-kratos/kratos/v2"
+	"github.com/go-kratos/kratos/v2/log"
 	"moderation/internal/biz"
 	"moderation/internal/conf"
 	"moderation/internal/data"
 	"moderation/internal/server"
 	"moderation/internal/service"
+)
 
-	"github.com/go-kratos/kratos/v2"
-	"github.com/go-kratos/kratos/v2/log"
-
+import (
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -27,30 +28,37 @@ func wireApp(confServer *conf.Server, confData *conf.Data, moderation *conf.Mode
 	if err != nil {
 		return nil, nil, err
 	}
-	textModerator := data.NewTextModerator(cache, moderation, logger)
-	grpcClient, cleanup2, err := data.NewNSFWClient(moderation, logger)
+	textClient, cleanup2, err := data.NewNSFWTextClient(moderation, logger)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	dataData, cleanup3, err := data.NewData(confData, logger)
+	textModerator := data.NewTextModerator(cache, textClient, moderation, logger)
+	imageClient, cleanup3, err := data.NewNSFWImageClient(moderation, logger)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	badImageRepo := data.NewBadImageRepo(dataData, logger)
-	localImageModerator := data.NewImageModerator(textModerator, cache, grpcClient, badImageRepo, logger)
+	dataData, cleanup4, err := data.NewData(confData, logger)
+	if err != nil {
+		cleanup3()
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	imageCacheRepo := data.NewImageCacheRepo(dataData, logger)
+	localImageModerator := data.NewImageModerator(textModerator, cache, imageClient, imageCacheRepo, logger)
 	localVideoModerator := data.NewVideoModerator(localImageModerator, textModerator, logger)
-	badwordRepo := data.NewBadwordRepo(dataData, logger)
-	moderationUsecase := biz.NewModerationUsecase(textModerator, localImageModerator, localVideoModerator, badwordRepo, logger)
+	textCacheRepo := data.NewTextCacheRepo(dataData, logger)
+	moderationUsecase := biz.NewModerationUsecase(textModerator, localImageModerator, localVideoModerator, textCacheRepo, imageCacheRepo, logger)
 	moderationService := service.NewModerationService(moderationUsecase)
-	badwordUsecase := biz.NewBadwordUsecase(badwordRepo, logger)
-	adminService := service.NewAdminService(badwordUsecase, moderationUsecase)
+	adminService := service.NewAdminService(moderationUsecase)
 	grpcServer := server.NewGRPCServer(confServer, moderationService, adminService, logger)
 	httpServer := server.NewHTTPServer(confServer, moderationService, adminService, logger)
 	app := newApp(logger, grpcServer, httpServer)
 	return app, func() {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()

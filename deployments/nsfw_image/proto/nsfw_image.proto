@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package nsfw.v1;
+
+option go_package = "moderation/api/nsfw_image/v1;v1";
+
+// NSFWImageDetector service for detecting NSFW content in images.
+service NSFWImageDetector {
+  // Predict NSFW content from raw image bytes.
+  rpc Predict(PredictRequest) returns (PredictResponse);
+
+  // Predict NSFW content from a public image URL.
+  rpc PredictFromURL(PredictURLRequest) returns (PredictResponse);
+
+  // Predict NSFW content for a batch of images (by URL).
+  rpc PredictBatchFromURLs(PredictBatchURLRequest)
+      returns (PredictBatchResponse);
+
+  // Health check.
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message PredictRequest { bytes image_data = 1; }
+
+message PredictURLRequest { string url = 1; }
+
+message PredictBatchURLRequest { repeated string urls = 1; }
+
+message PredictResponse {
+  bool is_nsfw = 1;
+  double nsfw_score = 2;
+  double normal_score = 3;
+  string label = 4;
+  double confidence = 5;
+}
+
+message BatchPredictionResult {
+  string url = 1;
+  PredictResponse result = 2;
+  string error = 3;
+}
+
+message PredictBatchResponse { repeated BatchPredictionResult predictions = 1; }
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string model = 2;
+  string device = 3;
+}

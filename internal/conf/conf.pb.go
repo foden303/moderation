@@ -195,14 +195,14 @@ func (x *Data) GetRedis() *Data_Redis {
 
 type Moderation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// VLLM configuration
-	Vllm *Moderation_VLLM `protobuf:"bytes,1,opt,name=vllm,proto3" json:"vllm,omitempty"`
 	// PHash configuration
 	Phash *Moderation_PHash `protobuf:"bytes,2,opt,name=phash,proto3" json:"phash,omitempty"`
 	// Text moderation configuration
 	Text *Moderation_TextModeration `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
-	// NSFW detector configuration
-	Nsfw *Moderation_NSFWDetector `protobuf:"bytes,4,opt,name=nsfw,proto3" json:"nsfw,omitempty"`
+	// NSFW image detector configuration
+	NsfwImage *Moderation_NSFWImageDetector `protobuf:"bytes,4,opt,name=nsfw_image,json=nsfwImage,proto3" json:"nsfw_image,omitempty"`
+	// NSFW text detector configuration
+	NsfwText *Moderation_NSFWTextDetector `protobuf:"bytes,6,opt,name=nsfw_text,json=nsfwText,proto3" json:"nsfw_text,omitempty"`
 	// Moderator configuration
 	Moderator     *Moderation_Moderator `protobuf:"bytes,5,opt,name=moderator,proto3" json:"moderator,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -239,13 +239,6 @@ func (*Moderation) Descriptor() ([]byte, []int) {
 	return file_conf_conf_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *Moderation) GetVllm() *Moderation_VLLM {
-	if x != nil {
-		return x.Vllm
-	}
-	return nil
-}
-
 func (x *Moderation) GetPhash() *Moderation_PHash {
 	if x != nil {
 		return x.Phash
@@ -260,9 +253,16 @@ func (x *Moderation) GetText() *Moderation_TextModeration {
 	return nil
 }
 
-func (x *Moderation) GetNsfw() *Moderation_NSFWDetector {
+func (x *Moderation) GetNsfwImage() *Moderation_NSFWImageDetector {
 	if x != nil {
-		return x.Nsfw
+		return x.NsfwImage
+	}
+	return nil
+}
+
+func (x *Moderation) GetNsfwText() *Moderation_NSFWTextDetector {
+	if x != nil {
+		return x.NsfwText
 	}
 	return nil
 }
@@ -607,91 +607,19 @@ func (x *Data_Database_Pool) GetMaxConnIdleTime() int64 {
 	return 0
 }
 
-type Moderation_VLLM struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Enable VLLM
-	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	// VLLM base URL
-	BaseUrl string `protobuf:"bytes,2,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
-	// VLLM model
-	Model string `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
-	// VLLM timeout
-	Timeout       *durationpb.Duration `protobuf:"bytes,4,opt,name=timeout,proto3" json:"timeout,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Moderation_VLLM) Reset() {
-	*x = Moderation_VLLM{}
-	mi := &file_conf_conf_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Moderation_VLLM) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Moderation_VLLM) ProtoMessage() {}
-
-func (x *Moderation_VLLM) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Moderation_VLLM.ProtoReflect.Descriptor instead.
-func (*Moderation_VLLM) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{3, 0}
-}
-
-func (x *Moderation_VLLM) GetEnabled() bool {
-	if x != nil {
-		return x.Enabled
-	}
-	return false
-}
-
-func (x *Moderation_VLLM) GetBaseUrl() string {
-	if x != nil {
-		return x.BaseUrl
-	}
-	return ""
-}
-
-func (x *Moderation_VLLM) GetModel() string {
-	if x != nil {
-		return x.Model
-	}
-	return ""
-}
-
-func (x *Moderation_VLLM) GetTimeout() *durationpb.Duration {
-	if x != nil {
-		return x.Timeout
-	}
-	return nil
-}
-
 type Moderation_PHash struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Enable PHash
 	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	// Hamming distance threshold (default 5)
-	SimilarityThreshold int32 `protobuf:"varint,2,opt,name=similarity_threshold,json=similarityThreshold,proto3" json:"similarity_threshold,omitempty"`
+	SimilarityThreshold float64 `protobuf:"fixed64,2,opt,name=similarity_threshold,json=similarityThreshold,proto3" json:"similarity_threshold,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Moderation_PHash) Reset() {
 	*x = Moderation_PHash{}
-	mi := &file_conf_conf_proto_msgTypes[10]
+	mi := &file_conf_conf_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -703,7 +631,7 @@ func (x *Moderation_PHash) String() string {
 func (*Moderation_PHash) ProtoMessage() {}
 
 func (x *Moderation_PHash) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[10]
+	mi := &file_conf_conf_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -716,7 +644,7 @@ func (x *Moderation_PHash) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Moderation_PHash.ProtoReflect.Descriptor instead.
 func (*Moderation_PHash) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{3, 1}
+	return file_conf_conf_proto_rawDescGZIP(), []int{3, 0}
 }
 
 func (x *Moderation_PHash) GetEnabled() bool {
@@ -726,7 +654,7 @@ func (x *Moderation_PHash) GetEnabled() bool {
 	return false
 }
 
-func (x *Moderation_PHash) GetSimilarityThreshold() int32 {
+func (x *Moderation_PHash) GetSimilarityThreshold() float64 {
 	if x != nil {
 		return x.SimilarityThreshold
 	}
@@ -736,16 +664,16 @@ func (x *Moderation_PHash) GetSimilarityThreshold() int32 {
 type Moderation_TextModeration struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Severity threshold to auto-reject
-	RejectThreshold int32 `protobuf:"varint,1,opt,name=reject_threshold,json=rejectThreshold,proto3" json:"reject_threshold,omitempty"`
+	RejectThreshold float64 `protobuf:"fixed64,1,opt,name=reject_threshold,json=rejectThreshold,proto3" json:"reject_threshold,omitempty"`
 	// Severity threshold for manual review
-	ReviewThreshold int32 `protobuf:"varint,2,opt,name=review_threshold,json=reviewThreshold,proto3" json:"review_threshold,omitempty"`
+	ReviewThreshold float64 `protobuf:"fixed64,2,opt,name=review_threshold,json=reviewThreshold,proto3" json:"review_threshold,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Moderation_TextModeration) Reset() {
 	*x = Moderation_TextModeration{}
-	mi := &file_conf_conf_proto_msgTypes[11]
+	mi := &file_conf_conf_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -757,7 +685,7 @@ func (x *Moderation_TextModeration) String() string {
 func (*Moderation_TextModeration) ProtoMessage() {}
 
 func (x *Moderation_TextModeration) ProtoReflect() protoreflect.Message {
-	mi := &file_conf_conf_proto_msgTypes[11]
+	mi := &file_conf_conf_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -770,51 +698,121 @@ func (x *Moderation_TextModeration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Moderation_TextModeration.ProtoReflect.Descriptor instead.
 func (*Moderation_TextModeration) Descriptor() ([]byte, []int) {
-	return file_conf_conf_proto_rawDescGZIP(), []int{3, 2}
+	return file_conf_conf_proto_rawDescGZIP(), []int{3, 1}
 }
 
-func (x *Moderation_TextModeration) GetRejectThreshold() int32 {
+func (x *Moderation_TextModeration) GetRejectThreshold() float64 {
 	if x != nil {
 		return x.RejectThreshold
 	}
 	return 0
 }
 
-func (x *Moderation_TextModeration) GetReviewThreshold() int32 {
+func (x *Moderation_TextModeration) GetReviewThreshold() float64 {
 	if x != nil {
 		return x.ReviewThreshold
 	}
 	return 0
 }
 
-type Moderation_NSFWDetector struct {
+type Moderation_NSFWImageDetector struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Enable NSFW detector
+	// Enable NSFW image detector
 	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	// gRPC address, e.g., "localhost:50051"
 	Addr string `protobuf:"bytes,2,opt,name=addr,proto3" json:"addr,omitempty"`
 	// Request timeout
 	Timeout *durationpb.Duration `protobuf:"bytes,3,opt,name=timeout,proto3" json:"timeout,omitempty"`
 	// Score threshold (default 0.5)
-	Threshold     float32 `protobuf:"fixed32,4,opt,name=threshold,proto3" json:"threshold,omitempty"`
+	Threshold     float64 `protobuf:"fixed64,4,opt,name=threshold,proto3" json:"threshold,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Moderation_NSFWDetector) Reset() {
-	*x = Moderation_NSFWDetector{}
+func (x *Moderation_NSFWImageDetector) Reset() {
+	*x = Moderation_NSFWImageDetector{}
+	mi := &file_conf_conf_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Moderation_NSFWImageDetector) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Moderation_NSFWImageDetector) ProtoMessage() {}
+
+func (x *Moderation_NSFWImageDetector) ProtoReflect() protoreflect.Message {
+	mi := &file_conf_conf_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Moderation_NSFWImageDetector.ProtoReflect.Descriptor instead.
+func (*Moderation_NSFWImageDetector) Descriptor() ([]byte, []int) {
+	return file_conf_conf_proto_rawDescGZIP(), []int{3, 2}
+}
+
+func (x *Moderation_NSFWImageDetector) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *Moderation_NSFWImageDetector) GetAddr() string {
+	if x != nil {
+		return x.Addr
+	}
+	return ""
+}
+
+func (x *Moderation_NSFWImageDetector) GetTimeout() *durationpb.Duration {
+	if x != nil {
+		return x.Timeout
+	}
+	return nil
+}
+
+func (x *Moderation_NSFWImageDetector) GetThreshold() float64 {
+	if x != nil {
+		return x.Threshold
+	}
+	return 0
+}
+
+type Moderation_NSFWTextDetector struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Enable NSFW text detector
+	Enabled bool `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// gRPC address, e.g., "localhost:50052"
+	Addr string `protobuf:"bytes,2,opt,name=addr,proto3" json:"addr,omitempty"`
+	// Request timeout
+	Timeout       *durationpb.Duration `protobuf:"bytes,3,opt,name=timeout,proto3" json:"timeout,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Moderation_NSFWTextDetector) Reset() {
+	*x = Moderation_NSFWTextDetector{}
 	mi := &file_conf_conf_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Moderation_NSFWDetector) String() string {
+func (x *Moderation_NSFWTextDetector) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Moderation_NSFWDetector) ProtoMessage() {}
+func (*Moderation_NSFWTextDetector) ProtoMessage() {}
 
-func (x *Moderation_NSFWDetector) ProtoReflect() protoreflect.Message {
+func (x *Moderation_NSFWTextDetector) ProtoReflect() protoreflect.Message {
 	mi := &file_conf_conf_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -826,37 +824,30 @@ func (x *Moderation_NSFWDetector) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Moderation_NSFWDetector.ProtoReflect.Descriptor instead.
-func (*Moderation_NSFWDetector) Descriptor() ([]byte, []int) {
+// Deprecated: Use Moderation_NSFWTextDetector.ProtoReflect.Descriptor instead.
+func (*Moderation_NSFWTextDetector) Descriptor() ([]byte, []int) {
 	return file_conf_conf_proto_rawDescGZIP(), []int{3, 3}
 }
 
-func (x *Moderation_NSFWDetector) GetEnabled() bool {
+func (x *Moderation_NSFWTextDetector) GetEnabled() bool {
 	if x != nil {
 		return x.Enabled
 	}
 	return false
 }
 
-func (x *Moderation_NSFWDetector) GetAddr() string {
+func (x *Moderation_NSFWTextDetector) GetAddr() string {
 	if x != nil {
 		return x.Addr
 	}
 	return ""
 }
 
-func (x *Moderation_NSFWDetector) GetTimeout() *durationpb.Duration {
+func (x *Moderation_NSFWTextDetector) GetTimeout() *durationpb.Duration {
 	if x != nil {
 		return x.Timeout
 	}
 	return nil
-}
-
-func (x *Moderation_NSFWDetector) GetThreshold() float32 {
-	if x != nil {
-		return x.Threshold
-	}
-	return 0
 }
 
 type Moderation_Moderator struct {
@@ -927,9 +918,9 @@ type Moderation_Moderator_ImageModerator struct {
 	// Number of workers
 	Workers int32 `protobuf:"varint,1,opt,name=workers,proto3" json:"workers,omitempty"`
 	// NSFW threshold
-	NsfwThreshold float32 `protobuf:"fixed32,2,opt,name=nsfw_threshold,json=nsfwThreshold,proto3" json:"nsfw_threshold,omitempty"`
+	NsfwThreshold float64 `protobuf:"fixed64,2,opt,name=nsfw_threshold,json=nsfwThreshold,proto3" json:"nsfw_threshold,omitempty"`
 	// Violence threshold
-	ViolenceThreshold float32 `protobuf:"fixed32,3,opt,name=violence_threshold,json=violenceThreshold,proto3" json:"violence_threshold,omitempty"`
+	ViolenceThreshold float64 `protobuf:"fixed64,3,opt,name=violence_threshold,json=violenceThreshold,proto3" json:"violence_threshold,omitempty"`
 	// Enable OCR
 	EnableOcr bool `protobuf:"varint,4,opt,name=enable_ocr,json=enableOcr,proto3" json:"enable_ocr,omitempty"`
 	// Request timeout
@@ -981,14 +972,14 @@ func (x *Moderation_Moderator_ImageModerator) GetWorkers() int32 {
 	return 0
 }
 
-func (x *Moderation_Moderator_ImageModerator) GetNsfwThreshold() float32 {
+func (x *Moderation_Moderator_ImageModerator) GetNsfwThreshold() float64 {
 	if x != nil {
 		return x.NsfwThreshold
 	}
 	return 0
 }
 
-func (x *Moderation_Moderator_ImageModerator) GetViolenceThreshold() float32 {
+func (x *Moderation_Moderator_ImageModerator) GetViolenceThreshold() float64 {
 	if x != nil {
 		return x.ViolenceThreshold
 	}
@@ -1039,19 +1030,11 @@ type Moderation_Moderator_TextModerator struct {
 	// Bloom filter key
 	BloomKey string `protobuf:"bytes,3,opt,name=bloom_key,json=bloomKey,proto3" json:"bloom_key,omitempty"`
 	// Severity threshold to auto-reject
-	RejectThreshold int32 `protobuf:"varint,4,opt,name=reject_threshold,json=rejectThreshold,proto3" json:"reject_threshold,omitempty"`
+	RejectThreshold float64 `protobuf:"fixed64,4,opt,name=reject_threshold,json=rejectThreshold,proto3" json:"reject_threshold,omitempty"`
 	// Severity threshold for manual review
-	ReviewThreshold int32 `protobuf:"varint,5,opt,name=review_threshold,json=reviewThreshold,proto3" json:"review_threshold,omitempty"`
-	// Enable LLM
-	EnableLlm bool `protobuf:"varint,6,opt,name=enable_llm,json=enableLlm,proto3" json:"enable_llm,omitempty"`
-	// LLM base URL
-	VllmBaseUrl string `protobuf:"bytes,7,opt,name=vllm_base_url,json=vllmBaseUrl,proto3" json:"vllm_base_url,omitempty"`
-	// LLM model
-	VllmModel string `protobuf:"bytes,8,opt,name=vllm_model,json=vllmModel,proto3" json:"vllm_model,omitempty"`
-	// LLM timeout
-	VllmTimeout   *durationpb.Duration `protobuf:"bytes,9,opt,name=vllm_timeout,json=vllmTimeout,proto3" json:"vllm_timeout,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ReviewThreshold float64 `protobuf:"fixed64,5,opt,name=review_threshold,json=reviewThreshold,proto3" json:"review_threshold,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Moderation_Moderator_TextModerator) Reset() {
@@ -1105,46 +1088,18 @@ func (x *Moderation_Moderator_TextModerator) GetBloomKey() string {
 	return ""
 }
 
-func (x *Moderation_Moderator_TextModerator) GetRejectThreshold() int32 {
+func (x *Moderation_Moderator_TextModerator) GetRejectThreshold() float64 {
 	if x != nil {
 		return x.RejectThreshold
 	}
 	return 0
 }
 
-func (x *Moderation_Moderator_TextModerator) GetReviewThreshold() int32 {
+func (x *Moderation_Moderator_TextModerator) GetReviewThreshold() float64 {
 	if x != nil {
 		return x.ReviewThreshold
 	}
 	return 0
-}
-
-func (x *Moderation_Moderator_TextModerator) GetEnableLlm() bool {
-	if x != nil {
-		return x.EnableLlm
-	}
-	return false
-}
-
-func (x *Moderation_Moderator_TextModerator) GetVllmBaseUrl() string {
-	if x != nil {
-		return x.VllmBaseUrl
-	}
-	return ""
-}
-
-func (x *Moderation_Moderator_TextModerator) GetVllmModel() string {
-	if x != nil {
-		return x.VllmModel
-	}
-	return ""
-}
-
-func (x *Moderation_Moderator_TextModerator) GetVllmTimeout() *durationpb.Duration {
-	if x != nil {
-		return x.VllmTimeout
-	}
-	return nil
 }
 
 type Moderation_Moderator_VideoModerator struct {
@@ -1258,58 +1213,52 @@ const file_conf_conf_proto_rawDesc = "" +
 	"\anetwork\x18\x01 \x01(\tR\anetwork\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x12<\n" +
 	"\fread_timeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\vreadTimeout\x12>\n" +
-	"\rwrite_timeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\fwriteTimeout\"\x93\x0f\n" +
+	"\rwrite_timeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\fwriteTimeout\"\x8b\x0e\n" +
 	"\n" +
-	"Moderation\x12/\n" +
-	"\x04vllm\x18\x01 \x01(\v2\x1b.kratos.api.Moderation.VLLMR\x04vllm\x122\n" +
+	"Moderation\x122\n" +
 	"\x05phash\x18\x02 \x01(\v2\x1c.kratos.api.Moderation.PHashR\x05phash\x129\n" +
-	"\x04text\x18\x03 \x01(\v2%.kratos.api.Moderation.TextModerationR\x04text\x127\n" +
-	"\x04nsfw\x18\x04 \x01(\v2#.kratos.api.Moderation.NSFWDetectorR\x04nsfw\x12>\n" +
-	"\tmoderator\x18\x05 \x01(\v2 .kratos.api.Moderation.ModeratorR\tmoderator\x1a\x86\x01\n" +
-	"\x04VLLM\x12\x18\n" +
-	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x19\n" +
-	"\bbase_url\x18\x02 \x01(\tR\abaseUrl\x12\x14\n" +
-	"\x05model\x18\x03 \x01(\tR\x05model\x123\n" +
-	"\atimeout\x18\x04 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x1aT\n" +
+	"\x04text\x18\x03 \x01(\v2%.kratos.api.Moderation.TextModerationR\x04text\x12G\n" +
+	"\n" +
+	"nsfw_image\x18\x04 \x01(\v2(.kratos.api.Moderation.NSFWImageDetectorR\tnsfwImage\x12D\n" +
+	"\tnsfw_text\x18\x06 \x01(\v2'.kratos.api.Moderation.NSFWTextDetectorR\bnsfwText\x12>\n" +
+	"\tmoderator\x18\x05 \x01(\v2 .kratos.api.Moderation.ModeratorR\tmoderator\x1aT\n" +
 	"\x05PHash\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x121\n" +
-	"\x14similarity_threshold\x18\x02 \x01(\x05R\x13similarityThreshold\x1af\n" +
+	"\x14similarity_threshold\x18\x02 \x01(\x01R\x13similarityThreshold\x1af\n" +
 	"\x0eTextModeration\x12)\n" +
-	"\x10reject_threshold\x18\x01 \x01(\x05R\x0frejectThreshold\x12)\n" +
-	"\x10review_threshold\x18\x02 \x01(\x05R\x0freviewThreshold\x1a\x8f\x01\n" +
-	"\fNSFWDetector\x12\x18\n" +
+	"\x10reject_threshold\x18\x01 \x01(\x01R\x0frejectThreshold\x12)\n" +
+	"\x10review_threshold\x18\x02 \x01(\x01R\x0freviewThreshold\x1a\x94\x01\n" +
+	"\x11NSFWImageDetector\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x12\n" +
 	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
 	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12\x1c\n" +
-	"\tthreshold\x18\x04 \x01(\x02R\tthreshold\x1a\x92\t\n" +
+	"\tthreshold\x18\x04 \x01(\x01R\tthreshold\x1au\n" +
+	"\x10NSFWTextDetector\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x12\n" +
+	"\x04addr\x18\x02 \x01(\tR\x04addr\x123\n" +
+	"\atimeout\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x1a\xf2\a\n" +
 	"\tModerator\x12X\n" +
 	"\x0fimage_moderator\x18\x01 \x01(\v2/.kratos.api.Moderation.Moderator.ImageModeratorR\x0eimageModerator\x12U\n" +
 	"\x0etext_moderator\x18\x02 \x01(\v2..kratos.api.Moderation.Moderator.TextModeratorR\rtextModerator\x12X\n" +
 	"\x0fvideo_moderator\x18\x03 \x01(\v2/.kratos.api.Moderation.Moderator.VideoModeratorR\x0evideoModerator\x1a\xba\x02\n" +
 	"\x0eImageModerator\x12\x18\n" +
 	"\aworkers\x18\x01 \x01(\x05R\aworkers\x12%\n" +
-	"\x0ensfw_threshold\x18\x02 \x01(\x02R\rnsfwThreshold\x12-\n" +
-	"\x12violence_threshold\x18\x03 \x01(\x02R\x11violenceThreshold\x12\x1d\n" +
+	"\x0ensfw_threshold\x18\x02 \x01(\x01R\rnsfwThreshold\x12-\n" +
+	"\x12violence_threshold\x18\x03 \x01(\x01R\x11violenceThreshold\x12\x1d\n" +
 	"\n" +
 	"enable_ocr\x18\x04 \x01(\bR\tenableOcr\x123\n" +
 	"\atimeout\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\atimeout\x12\x1d\n" +
 	"\n" +
 	"bloom_bits\x18\x06 \x01(\rR\tbloomBits\x12(\n" +
 	"\x10bloom_hash_funcs\x18\a \x01(\rR\x0ebloomHashFuncs\x12\x1b\n" +
-	"\tbloom_key\x18\b \x01(\tR\bbloomKey\x1a\xeb\x02\n" +
+	"\tbloom_key\x18\b \x01(\tR\bbloomKey\x1a\xcb\x01\n" +
 	"\rTextModerator\x12\x1d\n" +
 	"\n" +
 	"bloom_bits\x18\x01 \x01(\rR\tbloomBits\x12(\n" +
 	"\x10bloom_hash_funcs\x18\x02 \x01(\rR\x0ebloomHashFuncs\x12\x1b\n" +
 	"\tbloom_key\x18\x03 \x01(\tR\bbloomKey\x12)\n" +
-	"\x10reject_threshold\x18\x04 \x01(\x05R\x0frejectThreshold\x12)\n" +
-	"\x10review_threshold\x18\x05 \x01(\x05R\x0freviewThreshold\x12\x1d\n" +
-	"\n" +
-	"enable_llm\x18\x06 \x01(\bR\tenableLlm\x12\"\n" +
-	"\rvllm_base_url\x18\a \x01(\tR\vvllmBaseUrl\x12\x1d\n" +
-	"\n" +
-	"vllm_model\x18\b \x01(\tR\tvllmModel\x12<\n" +
-	"\fvllm_timeout\x18\t \x01(\v2\x19.google.protobuf.DurationR\vvllmTimeout\x1a\xce\x01\n" +
+	"\x10reject_threshold\x18\x04 \x01(\x01R\x0frejectThreshold\x12)\n" +
+	"\x10review_threshold\x18\x05 \x01(\x01R\x0freviewThreshold\x1a\xce\x01\n" +
 	"\x0eVideoModerator\x12*\n" +
 	"\x11frame_sample_rate\x18\x01 \x01(\x05R\x0fframeSampleRate\x12-\n" +
 	"\x13max_frames_to_check\x18\x02 \x01(\x05R\x10maxFramesToCheck\x12,\n" +
@@ -1339,10 +1288,10 @@ var file_conf_conf_proto_goTypes = []any{
 	(*Data_Database)(nil),                       // 6: kratos.api.Data.Database
 	(*Data_Redis)(nil),                          // 7: kratos.api.Data.Redis
 	(*Data_Database_Pool)(nil),                  // 8: kratos.api.Data.Database.Pool
-	(*Moderation_VLLM)(nil),                     // 9: kratos.api.Moderation.VLLM
-	(*Moderation_PHash)(nil),                    // 10: kratos.api.Moderation.PHash
-	(*Moderation_TextModeration)(nil),           // 11: kratos.api.Moderation.TextModeration
-	(*Moderation_NSFWDetector)(nil),             // 12: kratos.api.Moderation.NSFWDetector
+	(*Moderation_PHash)(nil),                    // 9: kratos.api.Moderation.PHash
+	(*Moderation_TextModeration)(nil),           // 10: kratos.api.Moderation.TextModeration
+	(*Moderation_NSFWImageDetector)(nil),        // 11: kratos.api.Moderation.NSFWImageDetector
+	(*Moderation_NSFWTextDetector)(nil),         // 12: kratos.api.Moderation.NSFWTextDetector
 	(*Moderation_Moderator)(nil),                // 13: kratos.api.Moderation.Moderator
 	(*Moderation_Moderator_ImageModerator)(nil), // 14: kratos.api.Moderation.Moderator.ImageModerator
 	(*Moderation_Moderator_TextModerator)(nil),  // 15: kratos.api.Moderation.Moderator.TextModerator
@@ -1357,29 +1306,28 @@ var file_conf_conf_proto_depIdxs = []int32{
 	5,  // 4: kratos.api.Server.grpc:type_name -> kratos.api.Server.GRPC
 	6,  // 5: kratos.api.Data.database:type_name -> kratos.api.Data.Database
 	7,  // 6: kratos.api.Data.redis:type_name -> kratos.api.Data.Redis
-	9,  // 7: kratos.api.Moderation.vllm:type_name -> kratos.api.Moderation.VLLM
-	10, // 8: kratos.api.Moderation.phash:type_name -> kratos.api.Moderation.PHash
-	11, // 9: kratos.api.Moderation.text:type_name -> kratos.api.Moderation.TextModeration
-	12, // 10: kratos.api.Moderation.nsfw:type_name -> kratos.api.Moderation.NSFWDetector
+	9,  // 7: kratos.api.Moderation.phash:type_name -> kratos.api.Moderation.PHash
+	10, // 8: kratos.api.Moderation.text:type_name -> kratos.api.Moderation.TextModeration
+	11, // 9: kratos.api.Moderation.nsfw_image:type_name -> kratos.api.Moderation.NSFWImageDetector
+	12, // 10: kratos.api.Moderation.nsfw_text:type_name -> kratos.api.Moderation.NSFWTextDetector
 	13, // 11: kratos.api.Moderation.moderator:type_name -> kratos.api.Moderation.Moderator
 	17, // 12: kratos.api.Server.HTTP.timeout:type_name -> google.protobuf.Duration
 	17, // 13: kratos.api.Server.GRPC.timeout:type_name -> google.protobuf.Duration
 	8,  // 14: kratos.api.Data.Database.pool:type_name -> kratos.api.Data.Database.Pool
 	17, // 15: kratos.api.Data.Redis.read_timeout:type_name -> google.protobuf.Duration
 	17, // 16: kratos.api.Data.Redis.write_timeout:type_name -> google.protobuf.Duration
-	17, // 17: kratos.api.Moderation.VLLM.timeout:type_name -> google.protobuf.Duration
-	17, // 18: kratos.api.Moderation.NSFWDetector.timeout:type_name -> google.protobuf.Duration
+	17, // 17: kratos.api.Moderation.NSFWImageDetector.timeout:type_name -> google.protobuf.Duration
+	17, // 18: kratos.api.Moderation.NSFWTextDetector.timeout:type_name -> google.protobuf.Duration
 	14, // 19: kratos.api.Moderation.Moderator.image_moderator:type_name -> kratos.api.Moderation.Moderator.ImageModerator
 	15, // 20: kratos.api.Moderation.Moderator.text_moderator:type_name -> kratos.api.Moderation.Moderator.TextModerator
 	16, // 21: kratos.api.Moderation.Moderator.video_moderator:type_name -> kratos.api.Moderation.Moderator.VideoModerator
 	17, // 22: kratos.api.Moderation.Moderator.ImageModerator.timeout:type_name -> google.protobuf.Duration
-	17, // 23: kratos.api.Moderation.Moderator.TextModerator.vllm_timeout:type_name -> google.protobuf.Duration
-	17, // 24: kratos.api.Moderation.Moderator.VideoModerator.timeout:type_name -> google.protobuf.Duration
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	17, // 23: kratos.api.Moderation.Moderator.VideoModerator.timeout:type_name -> google.protobuf.Duration
+	24, // [24:24] is the sub-list for method output_type
+	24, // [24:24] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_conf_conf_proto_init() }

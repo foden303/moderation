@@ -1,8 +1,7 @@
 version: "2"
 sql:
   - schema:
-      - "internal/data/migrations/00000000000001_create_badwords_table.up.sql"
-      - "internal/data/migrations/00000000000002_create_bad_images_table.up.sql"
+      - "internal/data/migrations/00000000000001_init_table.up.sql"
     queries: "internal/data/postgres/queries"
     engine: "postgresql"
     gen:
@@ -12,3 +11,6 @@ sql:
         sql_package: "pgx/v5"
         emit_json_tags: true
         emit_interface: true
+        # rename:
+        #     "TextCach": "TextCache"
+        #     "ImageCach": "ImageCache"

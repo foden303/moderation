@@ -16,9 +16,10 @@ import (
 var ProviderSet = wire.NewSet(
 	NewData,
 	NewRedisCache,
-	NewBadwordRepo,
-	NewBadImageRepo,
-	NewNSFWClient,
+	NewTextCacheRepo,
+	NewImageCacheRepo,
+	NewNSFWImageClient,
+	NewNSFWTextClient,
 	NewTextModerator,
 	NewImageModerator,
 	NewVideoModerator,

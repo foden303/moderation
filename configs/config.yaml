@@ -20,13 +20,6 @@ data:
     write_timeout: 0.2s
 
 moderation:
-  # Legacy fields (kept for backward compatibility during migration)
-  vllm:
-    enabled: true
-    base_url: http://localhost:8000
-    model: Qwen/Qwen3Guard-Gen-0.6B
-    timeout: 30s
-
   phash:
     enabled: true
     similarity_threshold: 5
@@ -35,34 +28,35 @@ moderation:
     reject_threshold: 3
     review_threshold: 2
 
-  nsfw:
+  nsfw_image:
     enabled: true
     addr: localhost:50051
     timeout: 30s
     threshold: 0.5
 
+  nsfw_text:
+    enabled: true
+    addr: localhost:50052
+    timeout: 30s
+
   # New consolidated moderator configuration
   moderator:
     image_moderator:
       workers: 4
+      bloom_bits: 1048576 # 1<<20
+      bloom_hash_funcs: 7
+      bloom_key: "moderation:bloom:image"
       nsfw_threshold: 0.7
       violence_threshold: 0.8
       enable_ocr: false
       timeout: 10s
-      bloom_bits: 1048576 # 1<<20
-      bloom_hash_funcs: 7
-      bloom_key: "moderation:image:bloom"
     
     text_moderator:
       bloom_bits: 8388608 # 8*1024*1024
       bloom_hash_funcs: 5
-      bloom_key: "moderation:bloom:badwords"
-      reject_threshold: 3
-      review_threshold: 2
-      enable_llm: true
-      vllm_base_url: "http://localhost:8000"
-      vllm_model: "Qwen/Qwen3Guard-Gen-0.6B"
-      vllm_timeout: 30s
+      bloom_key: "moderation:bloom:text"
+      reject_threshold: 0.85
+      review_threshold: 0.5
 
     video_moderator:
       frame_sample_rate: 5

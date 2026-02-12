@@ -146,25 +146,6 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/moderation.v1.BatchModerateResponse'
-    /api/v1/moderate/content:
-        post:
-            tags:
-                - ModerationService
-            description: ModerateContent checks a content for harmful content.
-            operationId: ModerationService_ModerateContent
-            requestBody:
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/moderation.v1.ModerateContentRequest'
-                required: true
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
     /api/v1/moderate/image:
         post:
             tags:
@@ -176,6 +157,25 @@ paths:
                     application/json:
                         schema:
                             $ref: '#/components/schemas/moderation.v1.ModerateImageRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/moderation.v1.ModerationResponse'
+    /api/v1/moderate/text:
+        post:
+            tags:
+                - ModerationService
+            description: ModerateText checks a text for harmful content.
+            operationId: ModerationService_ModerateText
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/moderation.v1.ModerateTextRequest'
                 required: true
             responses:
                 "200":
@@ -212,10 +212,12 @@ components:
                     type: string
                 category:
                     type: string
-                severity:
-                    type: integer
-                    format: int32
+                nsfwScore:
+                    type: number
+                    format: double
                 addedBy:
+                    type: string
+                modelVersion:
                     type: string
             description: Admin messages
         moderation.v1.AddBadWordResponse:
@@ -232,12 +234,12 @@ components:
                     type: string
                 category:
                     type: string
-                severity:
-                    type: integer
-                    format: int32
+                nsfwScore:
+                    type: number
+                    format: double
                 addedBy:
                     type: string
-                addedAt:
+                modelVersion:
                     type: string
         moderation.v1.BatchModerateRequest:
             type: object
@@ -272,15 +274,6 @@ components:
                     type: string
                 audioUrl:
                     type: string
-        moderation.v1.ModerateContentRequest:
-            type: object
-            properties:
-                requestId:
-                    type: string
-                ownerId:
-                    type: string
-                content:
-                    type: string
         moderation.v1.ModerateImageRequest:
             type: object
             properties:
@@ -297,7 +290,7 @@ components:
                     type: string
                 ownerId:
                     type: string
-                content:
+                text:
                     type: string
                 imageUrls:
                     type: array
@@ -312,6 +305,15 @@ components:
                     items:
                         type: string
             description: ModerateRequest messages
+        moderation.v1.ModerateTextRequest:
+            type: object
+            properties:
+                requestId:
+                    type: string
+                ownerId:
+                    type: string
+                text:
+                    type: string
         moderation.v1.ModerateVideoRequest:
             type: object
             properties:

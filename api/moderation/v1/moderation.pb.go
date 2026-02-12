@@ -131,7 +131,7 @@ type ModerateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
 	ImageUrls     []string               `protobuf:"bytes,4,rep,name=image_urls,json=imageUrls,proto3" json:"image_urls,omitempty"`
 	AudioUrls     []string               `protobuf:"bytes,5,rep,name=audio_urls,json=audioUrls,proto3" json:"audio_urls,omitempty"`
 	VideoUrls     []string               `protobuf:"bytes,6,rep,name=video_urls,json=videoUrls,proto3" json:"video_urls,omitempty"`
@@ -183,9 +183,9 @@ func (x *ModerateRequest) GetOwnerId() string {
 	return ""
 }
 
-func (x *ModerateRequest) GetContent() string {
+func (x *ModerateRequest) GetText() string {
 	if x != nil {
-		return x.Content
+		return x.Text
 	}
 	return ""
 }
@@ -211,29 +211,29 @@ func (x *ModerateRequest) GetVideoUrls() []string {
 	return nil
 }
 
-type ModerateContentRequest struct {
+type ModerateTextRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ModerateContentRequest) Reset() {
-	*x = ModerateContentRequest{}
+func (x *ModerateTextRequest) Reset() {
+	*x = ModerateTextRequest{}
 	mi := &file_moderation_v1_moderation_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ModerateContentRequest) String() string {
+func (x *ModerateTextRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ModerateContentRequest) ProtoMessage() {}
+func (*ModerateTextRequest) ProtoMessage() {}
 
-func (x *ModerateContentRequest) ProtoReflect() protoreflect.Message {
+func (x *ModerateTextRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_moderation_v1_moderation_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -245,28 +245,28 @@ func (x *ModerateContentRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ModerateContentRequest.ProtoReflect.Descriptor instead.
-func (*ModerateContentRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ModerateTextRequest.ProtoReflect.Descriptor instead.
+func (*ModerateTextRequest) Descriptor() ([]byte, []int) {
 	return file_moderation_v1_moderation_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ModerateContentRequest) GetRequestId() string {
+func (x *ModerateTextRequest) GetRequestId() string {
 	if x != nil {
 		return x.RequestId
 	}
 	return ""
 }
 
-func (x *ModerateContentRequest) GetOwnerId() string {
+func (x *ModerateTextRequest) GetOwnerId() string {
 	if x != nil {
 		return x.OwnerId
 	}
 	return ""
 }
 
-func (x *ModerateContentRequest) GetContent() string {
+func (x *ModerateTextRequest) GetText() string {
 	if x != nil {
-		return x.Content
+		return x.Text
 	}
 	return ""
 }
@@ -627,23 +627,23 @@ var File_moderation_v1_moderation_proto protoreflect.FileDescriptor
 
 const file_moderation_v1_moderation_proto_rawDesc = "" +
 	"\n" +
-	"\x1emoderation/v1/moderation.proto\x12\rmoderation.v1\x1a\x1cgoogle/api/annotations.proto\"\xc2\x01\n" +
+	"\x1emoderation/v1/moderation.proto\x12\rmoderation.v1\x1a\x1cgoogle/api/annotations.proto\"\xbc\x01\n" +
 	"\x0fModerateRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
-	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1d\n" +
+	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\x12\x1d\n" +
 	"\n" +
 	"image_urls\x18\x04 \x03(\tR\timageUrls\x12\x1d\n" +
 	"\n" +
 	"audio_urls\x18\x05 \x03(\tR\taudioUrls\x12\x1d\n" +
 	"\n" +
-	"video_urls\x18\x06 \x03(\tR\tvideoUrls\"l\n" +
-	"\x16ModerateContentRequest\x12\x1d\n" +
+	"video_urls\x18\x06 \x03(\tR\tvideoUrls\"c\n" +
+	"\x13ModerateTextRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
-	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x18\n" +
-	"\acontent\x18\x03 \x01(\tR\acontent\"m\n" +
+	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\"m\n" +
 	"\x14ModerateImageRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
@@ -685,10 +685,10 @@ const file_moderation_v1_moderation_proto_rawDesc = "" +
 	"\x13VERDICT_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rVERDICT_CLEAN\x10\x01\x12\x12\n" +
 	"\x0eVERDICT_REJECT\x10\x02\x12\x12\n" +
-	"\x0eVERDICT_REVIEW\x10\x032\xf5\x05\n" +
+	"\x0eVERDICT_REVIEW\x10\x032\xeb\x05\n" +
 	"\x11ModerationService\x12j\n" +
-	"\bModerate\x12\x1e.moderation.v1.ModerateRequest\x1a!.moderation.v1.ModerationResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/api/v1/moderate\x12\x80\x01\n" +
-	"\x0fModerateContent\x12%.moderation.v1.ModerateContentRequest\x1a!.moderation.v1.ModerationResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/moderate/content\x12z\n" +
+	"\bModerate\x12\x1e.moderation.v1.ModerateRequest\x1a!.moderation.v1.ModerationResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*\"\x10/api/v1/moderate\x12w\n" +
+	"\fModerateText\x12\".moderation.v1.ModerateTextRequest\x1a!.moderation.v1.ModerationResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/api/v1/moderate/text\x12z\n" +
 	"\rModerateImage\x12#.moderation.v1.ModerateImageRequest\x1a!.moderation.v1.ModerationResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/moderate/image\x12z\n" +
 	"\rModerateVideo\x12#.moderation.v1.ModerateVideoRequest\x1a!.moderation.v1.ModerationResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/moderate/video\x12z\n" +
 	"\rModerateAudio\x12#.moderation.v1.ModerateAudioRequest\x1a!.moderation.v1.ModerationResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/moderate/audio\x12}\n" +
@@ -710,17 +710,17 @@ func file_moderation_v1_moderation_proto_rawDescGZIP() []byte {
 var file_moderation_v1_moderation_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_moderation_v1_moderation_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_moderation_v1_moderation_proto_goTypes = []any{
-	(ModerationAction)(0),          // 0: moderation.v1.ModerationAction
-	(Verdict)(0),                   // 1: moderation.v1.Verdict
-	(*ModerateRequest)(nil),        // 2: moderation.v1.ModerateRequest
-	(*ModerateContentRequest)(nil), // 3: moderation.v1.ModerateContentRequest
-	(*ModerateImageRequest)(nil),   // 4: moderation.v1.ModerateImageRequest
-	(*ModerateAudioRequest)(nil),   // 5: moderation.v1.ModerateAudioRequest
-	(*ModerateVideoRequest)(nil),   // 6: moderation.v1.ModerateVideoRequest
-	(*ModerationResponse)(nil),     // 7: moderation.v1.ModerationResponse
-	(*BatchModerateRequest)(nil),   // 8: moderation.v1.BatchModerateRequest
-	(*BatchModerateResponse)(nil),  // 9: moderation.v1.BatchModerateResponse
-	nil,                            // 10: moderation.v1.ModerationResponse.ScoresEntry
+	(ModerationAction)(0),         // 0: moderation.v1.ModerationAction
+	(Verdict)(0),                  // 1: moderation.v1.Verdict
+	(*ModerateRequest)(nil),       // 2: moderation.v1.ModerateRequest
+	(*ModerateTextRequest)(nil),   // 3: moderation.v1.ModerateTextRequest
+	(*ModerateImageRequest)(nil),  // 4: moderation.v1.ModerateImageRequest
+	(*ModerateAudioRequest)(nil),  // 5: moderation.v1.ModerateAudioRequest
+	(*ModerateVideoRequest)(nil),  // 6: moderation.v1.ModerateVideoRequest
+	(*ModerationResponse)(nil),    // 7: moderation.v1.ModerationResponse
+	(*BatchModerateRequest)(nil),  // 8: moderation.v1.BatchModerateRequest
+	(*BatchModerateResponse)(nil), // 9: moderation.v1.BatchModerateResponse
+	nil,                           // 10: moderation.v1.ModerationResponse.ScoresEntry
 }
 var file_moderation_v1_moderation_proto_depIdxs = []int32{
 	0,  // 0: moderation.v1.ModerationResponse.action:type_name -> moderation.v1.ModerationAction
@@ -729,13 +729,13 @@ var file_moderation_v1_moderation_proto_depIdxs = []int32{
 	2,  // 3: moderation.v1.BatchModerateRequest.items:type_name -> moderation.v1.ModerateRequest
 	7,  // 4: moderation.v1.BatchModerateResponse.results:type_name -> moderation.v1.ModerationResponse
 	2,  // 5: moderation.v1.ModerationService.Moderate:input_type -> moderation.v1.ModerateRequest
-	3,  // 6: moderation.v1.ModerationService.ModerateContent:input_type -> moderation.v1.ModerateContentRequest
+	3,  // 6: moderation.v1.ModerationService.ModerateText:input_type -> moderation.v1.ModerateTextRequest
 	4,  // 7: moderation.v1.ModerationService.ModerateImage:input_type -> moderation.v1.ModerateImageRequest
 	6,  // 8: moderation.v1.ModerationService.ModerateVideo:input_type -> moderation.v1.ModerateVideoRequest
 	5,  // 9: moderation.v1.ModerationService.ModerateAudio:input_type -> moderation.v1.ModerateAudioRequest
 	8,  // 10: moderation.v1.ModerationService.BatchModerate:input_type -> moderation.v1.BatchModerateRequest
 	7,  // 11: moderation.v1.ModerationService.Moderate:output_type -> moderation.v1.ModerationResponse
-	7,  // 12: moderation.v1.ModerationService.ModerateContent:output_type -> moderation.v1.ModerationResponse
+	7,  // 12: moderation.v1.ModerationService.ModerateText:output_type -> moderation.v1.ModerationResponse
 	7,  // 13: moderation.v1.ModerationService.ModerateImage:output_type -> moderation.v1.ModerationResponse
 	7,  // 14: moderation.v1.ModerationService.ModerateVideo:output_type -> moderation.v1.ModerationResponse
 	7,  // 15: moderation.v1.ModerationService.ModerateAudio:output_type -> moderation.v1.ModerationResponse

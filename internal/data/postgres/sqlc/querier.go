@@ -6,29 +6,49 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
-	CountBadImages(ctx context.Context) (int64, error)
-	CountBadImagesByCategory(ctx context.Context, category pgtype.Text) (int64, error)
-	CountBadWords(ctx context.Context) (int64, error)
-	CountBadWordsByCategory(ctx context.Context, category pgtype.Text) (int64, error)
-	CreateBadImage(ctx context.Context, arg CreateBadImageParams) (BadImage, error)
-	CreateBadWord(ctx context.Context, arg CreateBadWordParams) (BadWord, error)
-	DeleteBadImage(ctx context.Context, phash int64) error
-	DeleteBadWord(ctx context.Context, word string) error
-	GetBadImageByPHash(ctx context.Context, phash int64) (BadImage, error)
-	GetBadImagesByPHashes(ctx context.Context, dollar_1 []int64) ([]BadImage, error)
-	GetBadWordByID(ctx context.Context, id int64) (BadWord, error)
-	GetBadWordByWord(ctx context.Context, word string) (BadWord, error)
-	ListAllBadImages(ctx context.Context) ([]BadImage, error)
-	ListAllBadWords(ctx context.Context) ([]BadWord, error)
-	ListBadImagesByCategory(ctx context.Context, arg ListBadImagesByCategoryParams) ([]BadImage, error)
-	ListBadWords(ctx context.Context, arg ListBadWordsParams) ([]BadWord, error)
-	ListBadWordsByCategory(ctx context.Context, arg ListBadWordsByCategoryParams) ([]BadWord, error)
-	UpdateBadWord(ctx context.Context, arg UpdateBadWordParams) (BadWord, error)
+	CountImageCaches(ctx context.Context) (int64, error)
+	CountImageCachesByCategory(ctx context.Context, category string) (int64, error)
+	CountImageDatasets(ctx context.Context) (int64, error)
+	CountImageDatasetsByCategory(ctx context.Context, category string) (int64, error)
+	CountTextCaches(ctx context.Context) (int64, error)
+	CountTextCachesByCategory(ctx context.Context, category string) (int64, error)
+	CountTextDatasets(ctx context.Context) (int64, error)
+	CountTextDatasetsByCategory(ctx context.Context, category string) (int64, error)
+	CreateImageDataset(ctx context.Context, arg CreateImageDatasetParams) (ImageDataset, error)
+	CreateTextDataset(ctx context.Context, arg CreateTextDatasetParams) (TextDataset, error)
+	DeleteExpiredImageCaches(ctx context.Context) (int64, error)
+	DeleteExpiredTextCaches(ctx context.Context) (int64, error)
+	DeleteImageCache(ctx context.Context, fileHash string) error
+	DeleteImageDataset(ctx context.Context, fileHash string) error
+	DeleteTextCache(ctx context.Context, contentHash string) error
+	DeleteTextDataset(ctx context.Context, contentHash string) error
+	GetAllImageCaches(ctx context.Context) ([]ImageCach, error)
+	GetAllImageDatasets(ctx context.Context) ([]ImageDataset, error)
+	GetAllTextCaches(ctx context.Context) ([]TextCach, error)
+	GetAllTextDatasets(ctx context.Context) ([]TextDataset, error)
+	GetImageCache(ctx context.Context, fileHash string) (ImageCach, error)
+	GetImageCacheByPHash(ctx context.Context, phash int64) ([]ImageCach, error)
+	GetImageDataset(ctx context.Context, fileHash string) (ImageDataset, error)
+	GetImageDatasetByID(ctx context.Context, id int64) (ImageDataset, error)
+	GetImageDatasetByPHash(ctx context.Context, phash int64) ([]ImageDataset, error)
+	GetTextCache(ctx context.Context, contentHash string) (TextCach, error)
+	GetTextDataset(ctx context.Context, contentHash string) (TextDataset, error)
+	GetTextDatasetByID(ctx context.Context, id int64) (TextDataset, error)
+	ListImageCaches(ctx context.Context, arg ListImageCachesParams) ([]ImageCach, error)
+	ListImageCachesByCategory(ctx context.Context, arg ListImageCachesByCategoryParams) ([]ImageCach, error)
+	ListImageDatasets(ctx context.Context, arg ListImageDatasetsParams) ([]ImageDataset, error)
+	ListImageDatasetsByCategory(ctx context.Context, arg ListImageDatasetsByCategoryParams) ([]ImageDataset, error)
+	ListTextCaches(ctx context.Context, arg ListTextCachesParams) ([]TextCach, error)
+	ListTextCachesByCategory(ctx context.Context, arg ListTextCachesByCategoryParams) ([]TextCach, error)
+	ListTextDatasets(ctx context.Context, arg ListTextDatasetsParams) ([]TextDataset, error)
+	ListTextDatasetsByCategory(ctx context.Context, arg ListTextDatasetsByCategoryParams) ([]TextDataset, error)
+	UpdateImageDataset(ctx context.Context, arg UpdateImageDatasetParams) (ImageDataset, error)
+	UpdateTextDataset(ctx context.Context, arg UpdateTextDatasetParams) (TextDataset, error)
+	UpsertImageCache(ctx context.Context, arg UpsertImageCacheParams) (ImageCach, error)
+	UpsertTextCache(ctx context.Context, arg UpsertTextCacheParams) (TextCach, error)
 }
 
 var _ Querier = (*Queries)(nil)

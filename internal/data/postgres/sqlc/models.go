@@ -8,23 +8,58 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type BadImage struct {
-	ID        int64              `json:"id"`
-	Phash     int64              `json:"phash"`
-	Category  pgtype.Text        `json:"category"`
-	NsfwScore pgtype.Float8      `json:"nsfw_score"`
-	SourceUrl pgtype.Text        `json:"source_url"`
-	AddedBy   pgtype.Text        `json:"added_by"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+type ImageCach struct {
+	FileHash     string             `json:"file_hash"`
+	Phash        int64              `json:"phash"`
+	DetectResult []byte             `json:"detect_result"`
+	Category     string             `json:"category"`
+	NsfwScore    float64            `json:"nsfw_score"`
+	ModelVersion string             `json:"model_version"`
+	SourceUrl    string             `json:"source_url"`
+	AddedBy      string             `json:"added_by"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
-type BadWord struct {
-	ID        int64              `json:"id"`
-	Word      string             `json:"word"`
-	Category  pgtype.Text        `json:"category"`
-	Severity  pgtype.Int4        `json:"severity"`
-	AddedBy   pgtype.Text        `json:"added_by"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+type ImageDataset struct {
+	ID           int64              `json:"id"`
+	FileHash     string             `json:"file_hash"`
+	Phash        int64              `json:"phash"`
+	DetectResult []byte             `json:"detect_result"`
+	Category     string             `json:"category"`
+	NsfwScore    float64            `json:"nsfw_score"`
+	ModelVersion string             `json:"model_version"`
+	SourceUrl    string             `json:"source_url"`
+	AddedBy      string             `json:"added_by"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TextCach struct {
+	ContentHash       string             `json:"content_hash"`
+	NormalizedContent string             `json:"normalized_content"`
+	DetectResult      []byte             `json:"detect_result"`
+	Category          string             `json:"category"`
+	NsfwScore         float64            `json:"nsfw_score"`
+	ModelVersion      string             `json:"model_version"`
+	AddedBy           string             `json:"added_by"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type TextDataset struct {
+	ID                int64              `json:"id"`
+	ContentHash       string             `json:"content_hash"`
+	NormalizedContent string             `json:"normalized_content"`
+	DetectResult      []byte             `json:"detect_result"`
+	Category          string             `json:"category"`
+	NsfwScore         float64            `json:"nsfw_score"`
+	ModelVersion      string             `json:"model_version"`
+	AddedBy           string             `json:"added_by"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }

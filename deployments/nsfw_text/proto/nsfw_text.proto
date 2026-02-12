@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package nsfw_text.v1;
+
+option go_package = "moderation/api/nsfw_text/v1;v1";
+
+// NSFWTextDetector service for detecting NSFW/unsafe content in text
+// using Qwen3Guard-Gen-0.6B.
+service NSFWTextDetector {
+  // Predict safety of a single text.
+  rpc Predict(PredictRequest) returns (PredictResponse);
+
+  // Predict safety for a batch of texts.
+  rpc PredictBatch(PredictBatchRequest) returns (PredictBatchResponse);
+
+  // Health check.
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message PredictRequest { string text = 1; }
+
+message PredictBatchRequest { repeated string texts = 1; }
+
+message PredictResponse {
+  bool is_nsfw = 1;
+  string safety_label = 2; // "Safe", "Unsafe", or "Controversial"
+  repeated string categories =
+      3; // e.g. ["Violent", "Sexual Content or Sexual Acts"]
+}
+
+message BatchPredictionResult {
+  string text = 1;
+  PredictResponse result = 2;
+  string error = 3;
+}
+
+message PredictBatchResponse { repeated BatchPredictionResult predictions = 1; }
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+  string model = 2;
+  string device = 3;
+}

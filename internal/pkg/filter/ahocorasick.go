@@ -11,17 +11,17 @@ import (
 
 // AhoCorasickMatch represents a match found by Aho-Corasick algorithm.
 type AhoCorasickMatch struct {
-	Word     string
-	Position int
-	Category string
-	Severity int32
+	Word      string
+	Position  int
+	Category  string
+	NsfwScore float64
 }
 
 // PatternInfo stores metadata about a pattern.
 type PatternInfo struct {
-	Word     string
-	Category string
-	Severity int32
+	Word      string
+	Category  string
+	NsfwScore float64
 }
 
 // ahoCorasickNode represents a node in the Aho-Corasick automaton.
@@ -145,10 +145,10 @@ func (ac *AhoCorasick) Search(text string) []AhoCorasickMatch {
 		// Check for matches at this position
 		for _, pattern := range node.output {
 			matches = append(matches, AhoCorasickMatch{
-				Word:     pattern.Word,
-				Position: position - len([]rune(pattern.Word)) + 1,
-				Category: pattern.Category,
-				Severity: pattern.Severity,
+				Word:      pattern.Word,
+				Position:  position - len([]rune(pattern.Word)) + 1,
+				Category:  pattern.Category,
+				NsfwScore: pattern.NsfwScore,
 			})
 		}
 		position++

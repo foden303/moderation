@@ -11,34 +11,23 @@ import (
 type AdminService struct {
 	v1.UnimplementedAdminServiceServer
 
-	badwordUc    *biz.BadwordUsecase
 	moderationUc *biz.ModerationUsecase
 }
 
 // NewAdminService creates a new AdminService.
-func NewAdminService(badwordUc *biz.BadwordUsecase, moderationUc *biz.ModerationUsecase) *AdminService {
+func NewAdminService(moderationUc *biz.ModerationUsecase) *AdminService {
 	return &AdminService{
-		badwordUc:    badwordUc,
 		moderationUc: moderationUc,
 	}
 }
 
 // AddBadWord adds a word to the blocklist.
 func (s *AdminService) AddBadWord(ctx context.Context, in *v1.AddBadWordRequest) (*v1.AddBadWordResponse, error) {
-	// Add to database
-	_, err := s.badwordUc.AddBadword(ctx, in.Word, in.Category, in.AddedBy, in.Severity)
-	if err != nil {
+	// Add to moderation (both DB and Bloom Filter)
+	if err := s.moderationUc.AddBadWord(ctx, in.Word, in.Category, in.NsfwScore, in.AddedBy, in.ModelVersion); err != nil {
 		return &v1.AddBadWordResponse{
 			Success: false,
-			Message: err.Error(),
-		}, nil
-	}
-
-	// Update moderation filters
-	if err := s.moderationUc.AddBadWord(ctx, in.Word, in.Category, in.AddedBy, in.Severity); err != nil {
-		return &v1.AddBadWordResponse{
-			Success: false,
-			Message: "Word added to database but failed to update filters: " + err.Error(),
+			Message: "Failed to add bad word: " + err.Error(),
 		}, nil
 	}
 
@@ -50,7 +39,7 @@ func (s *AdminService) AddBadWord(ctx context.Context, in *v1.AddBadWordRequest)
 
 // RemoveBadWord removes a word from the blocklist.
 func (s *AdminService) RemoveBadWord(ctx context.Context, in *v1.RemoveBadWordRequest) (*v1.RemoveBadWordResponse, error) {
-	err := s.badwordUc.RemoveBadword(ctx, in.Word)
+	err := s.moderationUc.RemoveBadWord(ctx, in.Word)
 	if err != nil {
 		return &v1.RemoveBadWordResponse{
 			Success: false,
@@ -65,7 +54,7 @@ func (s *AdminService) RemoveBadWord(ctx context.Context, in *v1.RemoveBadWordRe
 
 // ListBadWords lists all bad words.
 func (s *AdminService) ListBadWords(ctx context.Context, in *v1.ListBadWordsRequest) (*v1.ListBadWordsResponse, error) {
-	words, total, err := s.badwordUc.ListBadwords(ctx, in.Category, in.Limit, in.Offset)
+	words, total, err := s.moderationUc.ListBadWords(ctx, in.Category, in.Limit, in.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +62,11 @@ func (s *AdminService) ListBadWords(ctx context.Context, in *v1.ListBadWordsRequ
 	entries := make([]*v1.BadWordEntry, len(words))
 	for i, w := range words {
 		entries[i] = &v1.BadWordEntry{
-			Word:     w.Word,
-			Category: w.Category,
-			Severity: w.Severity,
-			AddedBy:  w.AddedBy,
-			AddedAt:  w.CreatedAt.Unix(),
+			Word:         w.NormalizedContent,
+			Category:     w.Category,
+			NsfwScore:    w.NSFWScore,
+			AddedBy:      &w.AddedBy,
+			ModelVersion: &w.ModelVersion,
 		}
 	}
 

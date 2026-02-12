@@ -27,8 +27,9 @@ type AddBadWordRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Word          string                 `protobuf:"bytes,1,opt,name=word,proto3" json:"word,omitempty"`
 	Category      string                 `protobuf:"bytes,2,opt,name=category,proto3" json:"category,omitempty"`
-	Severity      int32                  `protobuf:"varint,3,opt,name=severity,proto3" json:"severity,omitempty"`
-	AddedBy       string                 `protobuf:"bytes,4,opt,name=added_by,json=addedBy,proto3" json:"added_by,omitempty"`
+	NsfwScore     float64                `protobuf:"fixed64,3,opt,name=nsfw_score,json=nsfwScore,proto3" json:"nsfw_score,omitempty"`
+	AddedBy       *string                `protobuf:"bytes,4,opt,name=added_by,json=addedBy,proto3,oneof" json:"added_by,omitempty"`
+	ModelVersion  *string                `protobuf:"bytes,5,opt,name=model_version,json=modelVersion,proto3,oneof" json:"model_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -77,16 +78,23 @@ func (x *AddBadWordRequest) GetCategory() string {
 	return ""
 }
 
-func (x *AddBadWordRequest) GetSeverity() int32 {
+func (x *AddBadWordRequest) GetNsfwScore() float64 {
 	if x != nil {
-		return x.Severity
+		return x.NsfwScore
 	}
 	return 0
 }
 
 func (x *AddBadWordRequest) GetAddedBy() string {
-	if x != nil {
-		return x.AddedBy
+	if x != nil && x.AddedBy != nil {
+		return *x.AddedBy
+	}
+	return ""
+}
+
+func (x *AddBadWordRequest) GetModelVersion() string {
+	if x != nil && x.ModelVersion != nil {
+		return *x.ModelVersion
 	}
 	return ""
 }
@@ -355,9 +363,9 @@ type BadWordEntry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Word          string                 `protobuf:"bytes,1,opt,name=word,proto3" json:"word,omitempty"`
 	Category      string                 `protobuf:"bytes,2,opt,name=category,proto3" json:"category,omitempty"`
-	Severity      int32                  `protobuf:"varint,3,opt,name=severity,proto3" json:"severity,omitempty"`
-	AddedBy       string                 `protobuf:"bytes,4,opt,name=added_by,json=addedBy,proto3" json:"added_by,omitempty"`
-	AddedAt       int64                  `protobuf:"varint,5,opt,name=added_at,json=addedAt,proto3" json:"added_at,omitempty"`
+	NsfwScore     float64                `protobuf:"fixed64,3,opt,name=nsfw_score,json=nsfwScore,proto3" json:"nsfw_score,omitempty"`
+	AddedBy       *string                `protobuf:"bytes,4,opt,name=added_by,json=addedBy,proto3,oneof" json:"added_by,omitempty"`
+	ModelVersion  *string                `protobuf:"bytes,5,opt,name=model_version,json=modelVersion,proto3,oneof" json:"model_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -406,25 +414,25 @@ func (x *BadWordEntry) GetCategory() string {
 	return ""
 }
 
-func (x *BadWordEntry) GetSeverity() int32 {
+func (x *BadWordEntry) GetNsfwScore() float64 {
 	if x != nil {
-		return x.Severity
+		return x.NsfwScore
 	}
 	return 0
 }
 
 func (x *BadWordEntry) GetAddedBy() string {
-	if x != nil {
-		return x.AddedBy
+	if x != nil && x.AddedBy != nil {
+		return *x.AddedBy
 	}
 	return ""
 }
 
-func (x *BadWordEntry) GetAddedAt() int64 {
-	if x != nil {
-		return x.AddedAt
+func (x *BadWordEntry) GetModelVersion() string {
+	if x != nil && x.ModelVersion != nil {
+		return *x.ModelVersion
 	}
-	return 0
+	return ""
 }
 
 type RebuildBloomFilterRequest struct {
@@ -527,12 +535,16 @@ var File_moderation_v1_admin_proto protoreflect.FileDescriptor
 
 const file_moderation_v1_admin_proto_rawDesc = "" +
 	"\n" +
-	"\x19moderation/v1/admin.proto\x12\rmoderation.v1\x1a\x1cgoogle/api/annotations.proto\"z\n" +
+	"\x19moderation/v1/admin.proto\x12\rmoderation.v1\x1a\x1cgoogle/api/annotations.proto\"\xcb\x01\n" +
 	"\x11AddBadWordRequest\x12\x12\n" +
 	"\x04word\x18\x01 \x01(\tR\x04word\x12\x1a\n" +
-	"\bcategory\x18\x02 \x01(\tR\bcategory\x12\x1a\n" +
-	"\bseverity\x18\x03 \x01(\x05R\bseverity\x12\x19\n" +
-	"\badded_by\x18\x04 \x01(\tR\aaddedBy\"H\n" +
+	"\bcategory\x18\x02 \x01(\tR\bcategory\x12\x1d\n" +
+	"\n" +
+	"nsfw_score\x18\x03 \x01(\x01R\tnsfwScore\x12\x1e\n" +
+	"\badded_by\x18\x04 \x01(\tH\x00R\aaddedBy\x88\x01\x01\x12(\n" +
+	"\rmodel_version\x18\x05 \x01(\tH\x01R\fmodelVersion\x88\x01\x01B\v\n" +
+	"\t_added_byB\x10\n" +
+	"\x0e_model_version\"H\n" +
 	"\x12AddBadWordResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\"*\n" +
@@ -547,13 +559,16 @@ const file_moderation_v1_admin_proto_rawDesc = "" +
 	"\x06offset\x18\x03 \x01(\x05R\x06offset\"_\n" +
 	"\x14ListBadWordsResponse\x121\n" +
 	"\x05words\x18\x01 \x03(\v2\x1b.moderation.v1.BadWordEntryR\x05words\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total\"\x90\x01\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"\xc6\x01\n" +
 	"\fBadWordEntry\x12\x12\n" +
 	"\x04word\x18\x01 \x01(\tR\x04word\x12\x1a\n" +
-	"\bcategory\x18\x02 \x01(\tR\bcategory\x12\x1a\n" +
-	"\bseverity\x18\x03 \x01(\x05R\bseverity\x12\x19\n" +
-	"\badded_by\x18\x04 \x01(\tR\aaddedBy\x12\x19\n" +
-	"\badded_at\x18\x05 \x01(\x03R\aaddedAt\"\x1b\n" +
+	"\bcategory\x18\x02 \x01(\tR\bcategory\x12\x1d\n" +
+	"\n" +
+	"nsfw_score\x18\x03 \x01(\x01R\tnsfwScore\x12\x1e\n" +
+	"\badded_by\x18\x04 \x01(\tH\x00R\aaddedBy\x88\x01\x01\x12(\n" +
+	"\rmodel_version\x18\x05 \x01(\tH\x01R\fmodelVersion\x88\x01\x01B\v\n" +
+	"\t_added_byB\x10\n" +
+	"\x0e_model_version\"\x1b\n" +
 	"\x19RebuildBloomFilterRequest\"q\n" +
 	"\x1aRebuildBloomFilterResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
@@ -614,6 +629,8 @@ func file_moderation_v1_admin_proto_init() {
 	if File_moderation_v1_admin_proto != nil {
 		return
 	}
+	file_moderation_v1_admin_proto_msgTypes[0].OneofWrappers = []any{}
+	file_moderation_v1_admin_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -1,0 +1,10 @@
+--extra-index-url https://download.pytorch.org/whl/cu130
+
+ray[serve]>=2.9.0
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+protobuf>=4.25.0
+torch>=2.0.0
+transformers>=4.51.0
+python-dotenv
+accelerate>=0.30.0

@@ -22,7 +22,7 @@ func NewModerationService(uc *biz.ModerationUsecase) *ModerationService {
 // Moderate checks a post for harmful content.
 func (s *ModerationService) Moderate(ctx context.Context, in *v1.ModerateRequest) (*v1.ModerationResponse, error) {
 	// Map ModerateRequest to biz.Moderate
-	result, err := s.uc.Moderate(ctx, in.RequestId, in.Content, in.ImageUrls, in.AudioUrls, in.VideoUrls)
+	result, err := s.uc.Moderate(ctx, in.RequestId, in.Text, in.ImageUrls, in.AudioUrls, in.VideoUrls)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +30,9 @@ func (s *ModerationService) Moderate(ctx context.Context, in *v1.ModerateRequest
 	return toProtoResponse(result), nil
 }
 
-// ModerateContent checks text content for harmful content.
-func (s *ModerationService) ModerateContent(ctx context.Context, in *v1.ModerateContentRequest) (*v1.ModerationResponse, error) {
-	result, err := s.uc.ModerateText(ctx, in.RequestId, in.Content)
+// ModerateText checks text content for harmful content.
+func (s *ModerationService) ModerateText(ctx context.Context, in *v1.ModerateTextRequest) (*v1.ModerationResponse, error) {
+	result, err := s.uc.ModerateText(ctx, in.RequestId, in.Text)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (s *ModerationService) ModerateContent(ctx context.Context, in *v1.Moderate
 
 // ModerateImage checks an image for harmful content.
 func (s *ModerationService) ModerateImage(ctx context.Context, in *v1.ModerateImageRequest) (*v1.ModerationResponse, error) {
-	result, err := s.uc.ModerateImage(ctx, in.RequestId, in.ImageUrl)
+	result, err := s.uc.ModerateImage(ctx, in.RequestId, in.OwnerId, in.ImageUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *ModerationService) BatchModerate(ctx context.Context, in *v1.BatchModer
 		var err error
 
 		// call service moderate
-		result, err = s.uc.Moderate(ctx, item.RequestId, item.Content, item.ImageUrls, item.AudioUrls, item.VideoUrls)
+		result, err = s.uc.Moderate(ctx, item.RequestId, item.Text, item.ImageUrls, item.AudioUrls, item.VideoUrls)
 		if err != nil {
 			return nil, err
 		}

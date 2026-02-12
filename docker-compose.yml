@@ -54,19 +54,34 @@ services:
     restart: unless-stopped
     networks:
       - moderation-network
-  # NSFW Image Detector with Ray Serve + gRPC (new implementation)
-  nsfw-detector:
+  # NSFW Image Detector with Ray Serve + gRPC
+  nsfw-image:
     build:
-      context: ./deployments/nsfw_detector
+      context: ./deployments/nsfw_image
       dockerfile: Dockerfile
-    container_name: nsfw-detector
+    container_name: nsfw-image
     ports:
       - "50051:50051"  # gRPC
-      - "8265:8265"    # Ray dashboard (optional)
+      - "8265:8265"    # Ray dashboard
     environment:
       - PYTHONUNBUFFERED=1
     gpus: all
-    # For CPU only, remove the deploy section above
+    restart: unless-stopped
+    networks:
+      - moderation-network
+
+  # NSFW Text Detector with Ray Serve + gRPC (Qwen3Guard-Gen-0.6B)
+  nsfw-text:
+    build:
+      context: ./deployments/nsfw_text
+      dockerfile: Dockerfile
+    container_name: nsfw-text
+    ports:
+      - "50052:50052"  # gRPC
+      - "8266:8265"    # Ray dashboard (mapped to 8266 to avoid conflict)
+    environment:
+      - PYTHONUNBUFFERED=1
+    gpus: all
     restart: unless-stopped
     networks:
       - moderation-network
@@ -84,13 +99,16 @@ services:
       - DATABASE_URL=postgres://moderation:moderation123@postgres:5432/moderation?sslmode=disable
       - REDIS_ADDR=redis:6379
       - VLLM_URL=http://vllm:8000
-      - VLLM_MODEL=meta-llama/Llama-Guard-3-1B
-      - NSFW_URL=http://nsfw-detector:8080
+      - VLLM_MODEL=Qwen/Qwen3Guard-Gen-0.6B
+      - NSFW_IMAGE_ADDR=nsfw-image:50051
+      - NSFW_TEXT_ADDR=nsfw-text:50052
     depends_on:
       vllm:
         condition: service_healthy
-      nsfw-detector:
-        condition: service_healthy
+      nsfw-image:
+        condition: service_started
+      nsfw-text:
+        condition: service_started
       postgres:
         condition: service_started
       redis:

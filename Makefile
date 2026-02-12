@@ -42,16 +42,40 @@ api:
  	       --go-http_out=paths=source_relative:./api \
  	       --go-grpc_out=paths=source_relative:./api \
 	       --openapi_out=fq_schema_naming=true,default_response=false:. \
+	       --experimental_allow_proto3_optional \
 	       $(API_PROTO_FILES)
 
-.PHONY: nsfw-proto
+.PHONY: nsfw-image-proto
 # generate nsfw detector go client from deployments proto
-nsfw-proto:
-	mkdir -p api/nsfw_detector/v1
-	protoc --proto_path=./deployments/nsfw_detector/proto \
-	       --go_out=paths=source_relative:./api/nsfw_detector/v1 \
-	       --go-grpc_out=paths=source_relative:./api/nsfw_detector/v1 \
-	       nsfw.proto
+nsfw-image-proto:
+	mkdir -p api/nsfw_image/v1
+	protoc --proto_path=./deployments/nsfw_image/proto \
+	       --go_out=paths=source_relative:./api/nsfw_image/v1 \
+	       --go-grpc_out=paths=source_relative:./api/nsfw_image/v1 \
+	       nsfw_image.proto
+
+.PHONY: nsfw-text-proto
+# generate nsfw detector go client from deployments proto
+nsfw-text-proto:
+	mkdir -p api/nsfw_text/v1
+	protoc --proto_path=./deployments/nsfw_text/proto \
+	       --go_out=paths=source_relative:./api/nsfw_text/v1 \
+	       --go-grpc_out=paths=source_relative:./api/nsfw_text/v1 \
+	       nsfw_text.proto
+
+.PHONY: nsfw-image-build
+# build nsfw-image docker image
+nsfw-image-build:
+	docker compose -f docker-compose.dev.yml build nsfw-image
+
+.PHONY: nsfw-text-build
+# build nsfw-text docker image
+nsfw-text-build:
+	docker compose -f docker-compose.dev.yml build nsfw-text
+
+.PHONY: nsfw-build-all
+# build all nsfw docker images
+nsfw-build-all: nsfw-image-build nsfw-text-build
 
 .PHONY: build
 # build
@@ -122,5 +146,22 @@ help:
 		} \
 	} \
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
+
+
+.PHONY: migrate-up
+# run migrations up
+migrate-up:
+	migrate -path internal/data/migrations -database "postgres://postgres:123456@localhost:5432/moderation?sslmode=disable" up
+
+.PHONY: migrate-down
+# run migrations down
+migrate-down:
+	migrate -path internal/data/migrations -database "postgres://postgres:123456@localhost:5432/moderation?sslmode=disable" down 1
+
+.PHONY: redo-migrate
+# reset database and run migrations up
+redo-migrate:
+	migrate -path internal/data/migrations -database "postgres://postgres:123456@localhost:5432/moderation?sslmode=disable" down -all
+	migrate -path internal/data/migrations -database "postgres://postgres:123456@localhost:5432/moderation?sslmode=disable" up
 
 .DEFAULT_GOAL := help

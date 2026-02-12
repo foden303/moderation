@@ -16,10 +16,10 @@ service ModerationService {
       body : "*"
     };
   }
-  // ModerateContent checks a content for harmful content.
-  rpc ModerateContent(ModerateContentRequest) returns (ModerationResponse) {
+  // ModerateText checks a text for harmful content.
+  rpc ModerateText(ModerateTextRequest) returns (ModerationResponse) {
     option (google.api.http) = {
-      post : "/api/v1/moderate/content"
+      post : "/api/v1/moderate/text"
       body : "*"
     };
   }
@@ -61,16 +61,16 @@ service ModerationService {
 message ModerateRequest {
   string request_id = 1;
   string owner_id = 2;
-  string content = 3;
+  string text = 3;
   repeated string image_urls = 4;
   repeated string audio_urls = 5;
   repeated string video_urls = 6;
 }
 
-message ModerateContentRequest {
+message ModerateTextRequest {
   string request_id = 1;
   string owner_id = 2;
-  string content = 3;
+  string text = 3;
 }
 
 message ModerateImageRequest {

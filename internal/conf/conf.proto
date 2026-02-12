@@ -73,49 +73,57 @@ message Data {
 }
 
 message Moderation {
-  message VLLM {
-    // Enable VLLM
-    bool enabled = 1;
-    // VLLM base URL
-    string base_url = 2;
-    // VLLM model
-    string model = 3;
-    // VLLM timeout
-    google.protobuf.Duration timeout = 4;
-  }
-
   message PHash {
     // Enable PHash
     bool enabled = 1;
     // Hamming distance threshold (default 5)
-    int32 similarity_threshold = 2;
+    double similarity_threshold = 2;
   }
 
   message TextModeration {
     // Severity threshold to auto-reject
-    int32 reject_threshold = 1;
+    double reject_threshold = 1;
     // Severity threshold for manual review
-    int32 review_threshold = 2;
+    double review_threshold = 2;
   }
 
-  message NSFWDetector {
-    // Enable NSFW detector
+  message NSFWImageDetector {
+    // Enable NSFW image detector
     bool enabled = 1;
     // gRPC address, e.g., "localhost:50051"
     string addr = 2;
     // Request timeout
     google.protobuf.Duration timeout = 3;
     // Score threshold (default 0.5)
-    float threshold = 4;
+    double threshold = 4;
   }
+
+  message NSFWTextDetector {
+    // Enable NSFW text detector
+    bool enabled = 1;
+    // gRPC address, e.g., "localhost:50052"
+    string addr = 2;
+    // Request timeout
+    google.protobuf.Duration timeout = 3;
+  }
+
+  // PHash configuration
+  PHash phash = 2;
+  // Text moderation configuration
+  TextModeration text = 3;
+  // NSFW image detector configuration
+  NSFWImageDetector nsfw_image = 4;
+  // NSFW text detector configuration
+  NSFWTextDetector nsfw_text = 6;
+
   message Moderator {
     message ImageModerator {
       // Number of workers
       int32 workers = 1;
       // NSFW threshold
-      float nsfw_threshold = 2;
+      double nsfw_threshold = 2;
       // Violence threshold
-      float violence_threshold = 3;
+      double violence_threshold = 3;
       // Enable OCR
       bool enable_ocr = 4;
       // Request timeout
@@ -135,17 +143,9 @@ message Moderation {
       // Bloom filter key
       string bloom_key = 3;
       // Severity threshold to auto-reject
-      int32 reject_threshold = 4;
+      double reject_threshold = 4;
       // Severity threshold for manual review
-      int32 review_threshold = 5;
-      // Enable LLM
-      bool enable_llm = 6;
-      // LLM base URL
-      string vllm_base_url = 7;
-      // LLM model
-      string vllm_model = 8;
-      // LLM timeout
-      google.protobuf.Duration vllm_timeout = 9;
+      double review_threshold = 5;
     }
     message VideoModerator {
       // Sample 1 frame per N seconds
@@ -164,14 +164,6 @@ message Moderation {
     // Video moderation configuration
     VideoModerator video_moderator = 3;
   }
-  // VLLM configuration
-  VLLM vllm = 1;
-  // PHash configuration
-  PHash phash = 2;
-  // Text moderation configuration
-  TextModeration text = 3;
-  // NSFW detector configuration
-  NSFWDetector nsfw = 4;
   // Moderator configuration
   Moderator moderator = 5;
 }

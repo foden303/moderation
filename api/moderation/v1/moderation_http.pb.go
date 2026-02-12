@@ -22,8 +22,8 @@ const _ = http.SupportPackageIsVersion1
 const OperationModerationServiceBatchModerate = "/moderation.v1.ModerationService/BatchModerate"
 const OperationModerationServiceModerate = "/moderation.v1.ModerationService/Moderate"
 const OperationModerationServiceModerateAudio = "/moderation.v1.ModerationService/ModerateAudio"
-const OperationModerationServiceModerateContent = "/moderation.v1.ModerationService/ModerateContent"
 const OperationModerationServiceModerateImage = "/moderation.v1.ModerationService/ModerateImage"
+const OperationModerationServiceModerateText = "/moderation.v1.ModerationService/ModerateText"
 const OperationModerationServiceModerateVideo = "/moderation.v1.ModerationService/ModerateVideo"
 
 type ModerationServiceHTTPServer interface {
@@ -32,10 +32,10 @@ type ModerationServiceHTTPServer interface {
 	Moderate(context.Context, *ModerateRequest) (*ModerationResponse, error)
 	// ModerateAudio  ModerateAudio checks an audio for harmful content.
 	ModerateAudio(context.Context, *ModerateAudioRequest) (*ModerationResponse, error)
-	// ModerateContent ModerateContent checks a content for harmful content.
-	ModerateContent(context.Context, *ModerateContentRequest) (*ModerationResponse, error)
 	// ModerateImage ModerateImage checks an image for harmful content.
 	ModerateImage(context.Context, *ModerateImageRequest) (*ModerationResponse, error)
+	// ModerateText ModerateText checks a text for harmful content.
+	ModerateText(context.Context, *ModerateTextRequest) (*ModerationResponse, error)
 	// ModerateVideo ModerateVideo checks an video for harmful content.
 	ModerateVideo(context.Context, *ModerateVideoRequest) (*ModerationResponse, error)
 }
@@ -43,7 +43,7 @@ type ModerationServiceHTTPServer interface {
 func RegisterModerationServiceHTTPServer(s *http.Server, srv ModerationServiceHTTPServer) {
 	r := s.Route("/")
 	r.POST("/api/v1/moderate", _ModerationService_Moderate0_HTTP_Handler(srv))
-	r.POST("/api/v1/moderate/content", _ModerationService_ModerateContent0_HTTP_Handler(srv))
+	r.POST("/api/v1/moderate/text", _ModerationService_ModerateText0_HTTP_Handler(srv))
 	r.POST("/api/v1/moderate/image", _ModerationService_ModerateImage0_HTTP_Handler(srv))
 	r.POST("/api/v1/moderate/video", _ModerationService_ModerateVideo0_HTTP_Handler(srv))
 	r.POST("/api/v1/moderate/audio", _ModerationService_ModerateAudio0_HTTP_Handler(srv))
@@ -72,18 +72,18 @@ func _ModerationService_Moderate0_HTTP_Handler(srv ModerationServiceHTTPServer) 
 	}
 }
 
-func _ModerationService_ModerateContent0_HTTP_Handler(srv ModerationServiceHTTPServer) func(ctx http.Context) error {
+func _ModerationService_ModerateText0_HTTP_Handler(srv ModerationServiceHTTPServer) func(ctx http.Context) error {
 	return func(ctx http.Context) error {
-		var in ModerateContentRequest
+		var in ModerateTextRequest
 		if err := ctx.Bind(&in); err != nil {
 			return err
 		}
 		if err := ctx.BindQuery(&in); err != nil {
 			return err
 		}
-		http.SetOperation(ctx, OperationModerationServiceModerateContent)
+		http.SetOperation(ctx, OperationModerationServiceModerateText)
 		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.ModerateContent(ctx, req.(*ModerateContentRequest))
+			return srv.ModerateText(ctx, req.(*ModerateTextRequest))
 		})
 		out, err := h(ctx, &in)
 		if err != nil {
@@ -188,10 +188,10 @@ type ModerationServiceHTTPClient interface {
 	Moderate(ctx context.Context, req *ModerateRequest, opts ...http.CallOption) (rsp *ModerationResponse, err error)
 	// ModerateAudio  ModerateAudio checks an audio for harmful content.
 	ModerateAudio(ctx context.Context, req *ModerateAudioRequest, opts ...http.CallOption) (rsp *ModerationResponse, err error)
-	// ModerateContent ModerateContent checks a content for harmful content.
-	ModerateContent(ctx context.Context, req *ModerateContentRequest, opts ...http.CallOption) (rsp *ModerationResponse, err error)
 	// ModerateImage ModerateImage checks an image for harmful content.
 	ModerateImage(ctx context.Context, req *ModerateImageRequest, opts ...http.CallOption) (rsp *ModerationResponse, err error)
+	// ModerateText ModerateText checks a text for harmful content.
+	ModerateText(ctx context.Context, req *ModerateTextRequest, opts ...http.CallOption) (rsp *ModerationResponse, err error)
 	// ModerateVideo ModerateVideo checks an video for harmful content.
 	ModerateVideo(ctx context.Context, req *ModerateVideoRequest, opts ...http.CallOption) (rsp *ModerationResponse, err error)
 }
@@ -245,12 +245,12 @@ func (c *ModerationServiceHTTPClientImpl) ModerateAudio(ctx context.Context, in 
 	return &out, nil
 }
 
-// ModerateContent ModerateContent checks a content for harmful content.
-func (c *ModerationServiceHTTPClientImpl) ModerateContent(ctx context.Context, in *ModerateContentRequest, opts ...http.CallOption) (*ModerationResponse, error) {
+// ModerateImage ModerateImage checks an image for harmful content.
+func (c *ModerationServiceHTTPClientImpl) ModerateImage(ctx context.Context, in *ModerateImageRequest, opts ...http.CallOption) (*ModerationResponse, error) {
 	var out ModerationResponse
-	pattern := "/api/v1/moderate/content"
+	pattern := "/api/v1/moderate/image"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationModerationServiceModerateContent))
+	opts = append(opts, http.Operation(OperationModerationServiceModerateImage))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
@@ -259,12 +259,12 @@ func (c *ModerationServiceHTTPClientImpl) ModerateContent(ctx context.Context, i
 	return &out, nil
 }
 
-// ModerateImage ModerateImage checks an image for harmful content.
-func (c *ModerationServiceHTTPClientImpl) ModerateImage(ctx context.Context, in *ModerateImageRequest, opts ...http.CallOption) (*ModerationResponse, error) {
+// ModerateText ModerateText checks a text for harmful content.
+func (c *ModerationServiceHTTPClientImpl) ModerateText(ctx context.Context, in *ModerateTextRequest, opts ...http.CallOption) (*ModerationResponse, error) {
 	var out ModerationResponse
-	pattern := "/api/v1/moderate/image"
+	pattern := "/api/v1/moderate/text"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationModerationServiceModerateImage))
+	opts = append(opts, http.Operation(OperationModerationServiceModerateText))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "POST", path, in, &out, opts...)
 	if err != nil {
