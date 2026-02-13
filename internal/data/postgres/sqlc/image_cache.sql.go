@@ -54,6 +54,69 @@ func (q *Queries) DeleteImageCache(ctx context.Context, fileHash string) error {
 	return err
 }
 
+const findSimilarByPHash = `-- name: FindSimilarByPHash :many
+SELECT file_hash, phash, detect_result, category, nsfw_score, model_version, source_url, added_by, expires_at, created_at, updated_at,
+       bit_count((phash # $1)::bit(64))::integer AS distance
+FROM image_caches
+WHERE category <> 'safe'
+  AND bit_count((phash # $1)::bit(64))::integer <= $2
+ORDER BY distance ASC
+LIMIT 5
+`
+
+type FindSimilarByPHashParams struct {
+	TargetPhash int64 `json:"target_phash"`
+	MaxDistance int64 `json:"max_distance"`
+}
+
+type FindSimilarByPHashRow struct {
+	FileHash     string             `json:"file_hash"`
+	Phash        int64              `json:"phash"`
+	DetectResult []byte             `json:"detect_result"`
+	Category     string             `json:"category"`
+	NsfwScore    float64            `json:"nsfw_score"`
+	ModelVersion string             `json:"model_version"`
+	SourceUrl    string             `json:"source_url"`
+	AddedBy      string             `json:"added_by"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	Distance     int32              `json:"distance"`
+}
+
+func (q *Queries) FindSimilarByPHash(ctx context.Context, arg FindSimilarByPHashParams) ([]FindSimilarByPHashRow, error) {
+	rows, err := q.db.Query(ctx, findSimilarByPHash, arg.TargetPhash, arg.MaxDistance)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindSimilarByPHashRow
+	for rows.Next() {
+		var i FindSimilarByPHashRow
+		if err := rows.Scan(
+			&i.FileHash,
+			&i.Phash,
+			&i.DetectResult,
+			&i.Category,
+			&i.NsfwScore,
+			&i.ModelVersion,
+			&i.SourceUrl,
+			&i.AddedBy,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Distance,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllImageCaches = `-- name: GetAllImageCaches :many
 SELECT file_hash, phash, detect_result, category, nsfw_score, model_version, source_url, added_by, expires_at, created_at, updated_at FROM image_caches
 `
@@ -111,42 +174,6 @@ func (q *Queries) GetImageCache(ctx context.Context, fileHash string) (ImageCach
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getImageCacheByPHash = `-- name: GetImageCacheByPHash :many
-SELECT file_hash, phash, detect_result, category, nsfw_score, model_version, source_url, added_by, expires_at, created_at, updated_at FROM image_caches WHERE phash = $1
-`
-
-func (q *Queries) GetImageCacheByPHash(ctx context.Context, phash int64) ([]ImageCach, error) {
-	rows, err := q.db.Query(ctx, getImageCacheByPHash, phash)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ImageCach
-	for rows.Next() {
-		var i ImageCach
-		if err := rows.Scan(
-			&i.FileHash,
-			&i.Phash,
-			&i.DetectResult,
-			&i.Category,
-			&i.NsfwScore,
-			&i.ModelVersion,
-			&i.SourceUrl,
-			&i.AddedBy,
-			&i.ExpiresAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listImageCaches = `-- name: ListImageCaches :many

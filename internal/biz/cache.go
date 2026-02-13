@@ -49,7 +49,7 @@ type TextCacheRepo interface {
 type ImageCacheRepo interface {
 	Upsert(ctx context.Context, cache *ImageCache) error
 	Get(ctx context.Context, fileHash string) (*ImageCache, error)
-	GetByPHash(ctx context.Context, phash int64) ([]*ImageCache, error)
+	FindSimilarByPHash(ctx context.Context, phash int64, maxDistance int32) ([]*ImageCache, error)
 	Delete(ctx context.Context, fileHash string) error
 	DeleteExpired(ctx context.Context) (int64, error)
 	List(ctx context.Context, category string, limit, offset int32) ([]*ImageCache, error)

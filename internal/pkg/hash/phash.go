@@ -3,6 +3,8 @@ package hash
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -30,6 +32,7 @@ const (
 // ImageHash represents a computed image hash.
 type ImageHash struct {
 	Hash     uint64
+	FHash    string
 	HashType HashType
 	Width    int
 	Height   int
@@ -111,6 +114,16 @@ func (ph *PerceptualHasher) ComputeHashFromReader(r io.Reader, hashType HashType
 
 // ComputeHashFromURL computes a perceptual hash from an image URL.
 func (ph *PerceptualHasher) ComputeHashFromURL(ctx context.Context, url string, hashType HashType) (*ImageHash, error) {
+	data, err := ph.DownloadImage(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	return ph.ComputeHashFromBytes(data, hashType)
+}
+
+// DownloadImage downloads an image from URL and returns raw bytes.
+// This allows computing multiple hashes from a single HTTP request.
+func (ph *PerceptualHasher) DownloadImage(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -126,9 +139,64 @@ func (ph *PerceptualHasher) ComputeHashFromURL(ctx context.Context, url string, 
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	return ph.ComputeHashFromReader(resp.Body, hashType)
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image body: %w", err)
+	}
+
+	return data, nil
 }
 
+// ComputeHashFromURLCombined downloads an image once and computes both
+// SHA256 (FHash) and perceptual hash (Hash) from the same bytes.
+func (ph *PerceptualHasher) ComputeHashFromURLCombined(
+	ctx context.Context,
+	url string,
+	hashType HashType,
+	fileHash *string,
+) (*ImageHash, error) {
+
+	data, err := ph.DownloadImage(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+
+	fHash := ResolveFileHash(data, fileHash)
+
+	img, err := decodeImage(data)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := ph.computeHash(img, hashType)
+	if err != nil {
+		return nil, err
+	}
+
+	result.FHash = fHash
+	return result, nil
+}
+
+// decodeImage decodes the image from bytes.
+func decodeImage(data []byte) (image.Image, error) {
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("decode image failed: %w", err)
+	}
+	return img, nil
+}
+
+// ResolveFileHash returns the file hash, computing SHA256 if not provided.
+func ResolveFileHash(data []byte, fileHash *string) string {
+	if fileHash != nil && *fileHash != "" {
+		return *fileHash
+	}
+
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// computeHash computes the perceptual hash of an image.
 func (ph *PerceptualHasher) computeHash(img image.Image, hashType HashType) (*ImageHash, error) {
 	switch hashType {
 	case PHash:

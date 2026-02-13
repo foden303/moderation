@@ -276,6 +276,7 @@ type ModerateImageRequest struct {
 	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	ImageUrl      string                 `protobuf:"bytes,3,opt,name=image_url,json=imageUrl,proto3" json:"image_url,omitempty"`
+	FileHash      *string                `protobuf:"bytes,4,opt,name=file_hash,json=fileHash,proto3,oneof" json:"file_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -327,6 +328,13 @@ func (x *ModerateImageRequest) GetOwnerId() string {
 func (x *ModerateImageRequest) GetImageUrl() string {
 	if x != nil {
 		return x.ImageUrl
+	}
+	return ""
+}
+
+func (x *ModerateImageRequest) GetFileHash() string {
+	if x != nil && x.FileHash != nil {
+		return *x.FileHash
 	}
 	return ""
 }
@@ -643,12 +651,15 @@ const file_moderation_v1_moderation_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x12\n" +
-	"\x04text\x18\x03 \x01(\tR\x04text\"m\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\"\x9d\x01\n" +
 	"\x14ModerateImageRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x1b\n" +
-	"\timage_url\x18\x03 \x01(\tR\bimageUrl\"m\n" +
+	"\timage_url\x18\x03 \x01(\tR\bimageUrl\x12 \n" +
+	"\tfile_hash\x18\x04 \x01(\tH\x00R\bfileHash\x88\x01\x01B\f\n" +
+	"\n" +
+	"_file_hash\"m\n" +
 	"\x14ModerateAudioRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x19\n" +
@@ -752,6 +763,7 @@ func file_moderation_v1_moderation_proto_init() {
 	if File_moderation_v1_moderation_proto != nil {
 		return
 	}
+	file_moderation_v1_moderation_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

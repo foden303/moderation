@@ -212,10 +212,10 @@ func (uc *ModerationUsecase) ModerateText(ctx context.Context, requestID, text s
 }
 
 // ModerateImage moderates an image URL.
-func (uc *ModerationUsecase) ModerateImage(ctx context.Context, requestID, ownerID, imageURL string) (*ModerationResult, error) {
+func (uc *ModerationUsecase) ModerateImage(ctx context.Context, requestID, ownerID, imageURL string, fileHash *string) (*ModerationResult, error) {
 	uc.log.Debugf("ModerateImage: requestID=%s, ownerID=%s", requestID, ownerID)
 
-	imgResult, err := uc.imageModerator.ModerateImageURL(ctx, imageURL)
+	imgResult, err := uc.imageModerator.ModerateImageURL(ctx, ownerID, imageURL, fileHash)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +302,7 @@ func (uc *ModerationUsecase) Moderate(ctx context.Context, requestID, content st
 		// For simplicity, we just take the first bad result or the last result
 		// In a real system, we might want a list of image results
 		for _, url := range imageURLs {
-			imgResult, err := uc.imageModerator.ModerateImageURL(ctx, url)
+			imgResult, err := uc.imageModerator.ModerateImageURL(ctx, "", url, nil)
 			if err != nil {
 				uc.log.Errorf("Failed to moderate image %s: %v", url, err)
 				continue

@@ -42,7 +42,7 @@ func (s *ModerationService) ModerateText(ctx context.Context, in *v1.ModerateTex
 
 // ModerateImage checks an image for harmful content.
 func (s *ModerationService) ModerateImage(ctx context.Context, in *v1.ModerateImageRequest) (*v1.ModerationResponse, error) {
-	result, err := s.uc.ModerateImage(ctx, in.RequestId, in.OwnerId, in.ImageUrl)
+	result, err := s.uc.ModerateImage(ctx, in.RequestId, in.OwnerId, in.ImageUrl, in.FileHash)
 	if err != nil {
 		return nil, err
 	}

@@ -7,16 +7,15 @@
 package main
 
 import (
-	"github.com/go-kratos/kratos/v2"
-	"github.com/go-kratos/kratos/v2/log"
 	"moderation/internal/biz"
 	"moderation/internal/conf"
 	"moderation/internal/data"
 	"moderation/internal/server"
 	"moderation/internal/service"
-)
 
-import (
+	"github.com/go-kratos/kratos/v2"
+	"github.com/go-kratos/kratos/v2/log"
+
 	_ "go.uber.org/automaxprocs"
 )
 
@@ -33,14 +32,15 @@ func wireApp(confServer *conf.Server, confData *conf.Data, moderation *conf.Mode
 		cleanup()
 		return nil, nil, err
 	}
-	textModerator := data.NewTextModerator(cache, textClient, moderation, logger)
-	imageClient, cleanup3, err := data.NewNSFWImageClient(moderation, logger)
+	dataData, cleanup3, err := data.NewData(confData, logger)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	dataData, cleanup4, err := data.NewData(confData, logger)
+	textCacheRepo := data.NewTextCacheRepo(dataData, logger)
+	textModerator := data.NewTextModerator(cache, textClient, textCacheRepo, moderation, logger)
+	imageClient, cleanup4, err := data.NewNSFWImageClient(moderation, logger)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -50,7 +50,6 @@ func wireApp(confServer *conf.Server, confData *conf.Data, moderation *conf.Mode
 	imageCacheRepo := data.NewImageCacheRepo(dataData, logger)
 	localImageModerator := data.NewImageModerator(textModerator, cache, imageClient, imageCacheRepo, logger)
 	localVideoModerator := data.NewVideoModerator(localImageModerator, textModerator, logger)
-	textCacheRepo := data.NewTextCacheRepo(dataData, logger)
 	moderationUsecase := biz.NewModerationUsecase(textModerator, localImageModerator, localVideoModerator, textCacheRepo, imageCacheRepo, logger)
 	moderationService := service.NewModerationService(moderationUsecase)
 	adminService := service.NewAdminService(moderationUsecase)

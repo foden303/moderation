@@ -3,6 +3,8 @@ package moderator
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -34,13 +36,13 @@ type ImageModerationResult struct {
 	ShouldReview bool
 	PHash        uint64  // Perceptual hash of the image
 	NSFWScore    float64 // NSFW detection score
-	CacheHit     bool    // Whether result came from cache (Bloom filter hit)
+	CacheHit     bool    // Whether result came from cache
 }
 
 // ImageModerator interface for image content moderation.
 type ImageModerator interface {
 	// ModerateImageURL moderates an image from a URL.
-	ModerateImageURL(ctx context.Context, url string) (*ImageModerationResult, error)
+	ModerateImageURL(ctx context.Context, ownerID, url string, fileHash *string) (*ImageModerationResult, error)
 	// ModerateImageURLs moderates multiple images from URLs.
 	ModerateImageURLs(ctx context.Context, urls []string) ([]*ImageModerationResult, error)
 }
@@ -50,11 +52,14 @@ type ImageModeratorConfig struct {
 	Workers           int           // Number of workers for parallel processing
 	NSFWThreshold     float64       // Threshold for NSFW detection (0-1)
 	ViolenceThreshold float64       // Threshold for violence detection (0-1)
+	PHashMaxDistance  int32         // Max Hamming distance for pHash similarity (0=exact, 10=similar)
 	EnableOCR         bool          // Enable OCR for text-in-image detection
 	Timeout           time.Duration // Request timeout
 	BloomBits         uint          // Bloom filter size in bits
 	BloomHashFuncs    uint          // Number of hash functions for Bloom filter
 	BloomKey          string        // Redis key for image Bloom filter
+	CacheKeyPrefix    string        // Redis key prefix for image cache
+	CacheTTL          time.Duration // TTL for Redis image cache
 }
 
 // DefaultImageModeratorConfig returns default configuration.
@@ -63,20 +68,43 @@ func DefaultImageModeratorConfig() ImageModeratorConfig {
 		Workers:           4,
 		NSFWThreshold:     0.7,
 		ViolenceThreshold: 0.8,
+		PHashMaxDistance:  10,
 		EnableOCR:         false,
 		Timeout:           10 * time.Second,
 		BloomBits:         1 << 20, // ~1M bits = 128KB
 		BloomHashFuncs:    7,
 		BloomKey:          "moderation:bloom:image",
+		CacheKeyPrefix:    "moderation:image:",
+		CacheTTL:          24 * time.Hour,
 	}
+}
+
+// ImageCacheResult represents a cached image moderation result from DB.
+type ImageCacheResult struct {
+	Category  string
+	NSFWScore float64
+	PHash     int64
 }
 
 // BadImageChecker is an interface for checking/storing bad images.
 type BadImageChecker interface {
-	// FindByPHash checks if a pHash exists in the database.
-	FindByPHash(ctx context.Context, phash int64) (bool, error)
+	// FindByPHash searches for similar images within Hamming distance threshold.
+	// Returns the closest match or nil if no similar image found.
+	FindByPHash(ctx context.Context, phash int64, maxDistance int32) (*ImageCacheResult, error)
+	// FindByFileHash looks up a cached result by file hash (SHA256).
+	FindByFileHash(ctx context.Context, fileHash string) (*ImageCacheResult, error)
 	// SaveBadImage saves a bad image pHash to the database.
 	SaveBadImage(ctx context.Context, phash int64, category string, nsfwScore float64, sourceURL string) error
+	// SaveImageResult saves any image result (safe or unsafe) to the database.
+	SaveImageResult(ctx context.Context, fileHash string, phash int64, category string, nsfwScore float64, sourceURL string) error
+}
+
+// imageCacheEntry is the JSON structure stored in Redis cache.
+type imageCacheEntry struct {
+	Category  string  `json:"category"`
+	NSFWScore float64 `json:"nsfw_score"`
+	PHash     int64   `json:"phash"`
+	IsClean   bool    `json:"is_clean"`
 }
 
 // LocalImageModerator implements multi-layer image moderation with pHash + Bloom filter.
@@ -85,8 +113,10 @@ type LocalImageModerator struct {
 	textModerator   *TextModerator
 	bloomFilter     *bloom.Filter
 	hasher          *hash.PerceptualHasher
+	sha256Hasher    *hash.Sha256Hasher
 	nsfwClient      *nsfw.ImageClient
 	badImageChecker BadImageChecker
+	redisCache      redis.Cache
 	log             *log.Helper
 }
 
@@ -104,67 +134,194 @@ func NewLocalImageModerator(
 		textModerator:   textMod,
 		bloomFilter:     bloom.NewBloomFilter(redisCache, config.BloomKey, config.BloomBits, config.BloomHashFuncs),
 		hasher:          hash.NewPerceptualHasher(),
+		sha256Hasher:    hash.NewSha256Hasher(),
 		nsfwClient:      nsfwClient,
 		badImageChecker: badImageChecker,
+		redisCache:      redisCache,
 		log:             log.NewHelper(logger),
 	}
 }
 
 // ModerateImageURL moderates an image from a URL.
-// 1. Generate pHash
-// 2. Check Bloom filter
-// 3. If Bloom hit -> DB lookup to confirm
-// 4. If not cached -> NSFW detector
-// 5. If NSFW -> Save to DB + Bloom
-func (m *LocalImageModerator) ModerateImageURL(ctx context.Context, url string) (*ImageModerationResult, error) {
-	// Step 1: Generate pHash from URL
-	imgHash, err := m.hasher.ComputeHashFromURL(ctx, url, hash.PHash)
+// Optimized flow:
+//   - If fileHash provided: check cache BEFORE downloading (zero HTTP on cache hit)
+//   - If fileHash not provided: download once, compute SHA256 + pHash from same bytes
+//   - NSFW detection uses raw bytes (no re-download by NSFW service)
+func (m *LocalImageModerator) ModerateImageURL(
+	ctx context.Context,
+	ownerID, url string,
+	fileHash *string,
+) (*ImageModerationResult, error) {
+
+	// step 1. Fast cache check when fileHash provided
+	if fHash := safeString(fileHash); fHash != "" {
+		if res := m.tryCache(ctx, fHash); res != nil {
+			return res, nil
+		}
+	}
+
+	// step 2. Download image once
+	imgData, err := m.hasher.DownloadImage(ctx, url)
 	if err != nil {
-		m.log.Warnf("Failed to compute pHash from URL: %v, using direct detection", err)
-		return m.detectNSFWFromURL(ctx, url, 0)
+		return nil, fmt.Errorf("failed to download image: %w", err)
+	}
+
+	// step 3. Resolve SHA256 fileHash
+	fHash := hash.ResolveFileHash(imgData, fileHash)
+
+	// step 4. Re-check cache after computing hash
+	if res := m.tryCache(ctx, fHash); res != nil {
+		return res, nil
+	}
+
+	// step 5. Compute pHash
+	imgHash, err := m.hasher.ComputeHashFromBytes(imgData, hash.PHash)
+	if err != nil {
+		m.log.Warnf("Failed to compute pHash: %v", err)
+		return nil, err
 	}
 
 	phash := imgHash.Hash
 	m.log.Debugf("Image pHash: %016x for URL: %s", phash, url)
-	// Step 2: Check Bloom filter
+
+	// step 6. Check bloom + DB for known bad image
+	if res := m.checkKnownBadImage(ctx, phash, fHash, url); res != nil {
+		return res, nil
+	}
+
+	// step 7. Run AI detection
+	return m.detectNSFWFromBytes(ctx, imgData, url, phash, fHash)
+}
+
+// checkKnownBadImage checks if a similar pHash exists in the database using Hamming distance.
+func (m *LocalImageModerator) checkKnownBadImage(
+	ctx context.Context,
+	phash uint64,
+	fHash string,
+	url string,
+) *ImageModerationResult {
+
 	phashBytes := m.phashToBytes(phash)
+
 	maybeExists, err := m.bloomFilter.ExistsWithCtx(ctx, phashBytes)
 	if err != nil {
 		m.log.Warnf("Bloom filter check failed: %v", err)
+		return nil
 	}
 
-	if maybeExists {
-		m.log.Debugf("Bloom filter hit for pHash %016x", phash)
-
-		// Step 3: DB lookup
-		exists, err := m.badImageChecker.FindByPHash(ctx, int64(phash))
-		if err != nil {
-			m.log.Warnf("DB lookup failed: %v", err)
-		}
-
-		if exists {
-			m.log.Infof("Cached bad image detected: pHash=%016x", phash)
-			return &ImageModerationResult{
-				IsClean:      false,
-				ShouldReject: true,
-				Categories:   map[ImageCategory]float64{ImageCategoryNSFW: 1.0},
-				PHash:        phash,
-				CacheHit:     true,
-			}, nil
-		}
+	if !maybeExists {
+		return nil
 	}
-	// Step 4: NSFW detection from URL
-	return m.detectNSFWFromURL(ctx, url, phash)
+
+	m.log.Debugf("Bloom filter hit for pHash %016x", phash)
+
+	match, err := m.badImageChecker.FindByPHash(ctx, int64(phash), m.config.PHashMaxDistance)
+	if err != nil {
+		m.log.Warnf("DB similarity lookup by pHash failed: %v", err)
+		return nil
+	}
+
+	if match == nil {
+		return nil
+	}
+
+	m.log.Infof("Similar bad image detected: pHash=%016x, matched category=%s, nsfw=%.2f", phash, match.Category, match.NSFWScore)
+
+	result := &ImageModerationResult{
+		IsClean:      false,
+		ShouldReject: true,
+		Categories:   map[ImageCategory]float64{ImageCategoryNSFW: match.NSFWScore},
+		PHash:        phash,
+		CacheHit:     true,
+	}
+	m.saveImageResult(ctx, fHash, int64(phash), match.Category, match.NSFWScore, url)
+	return result
 }
 
-func (m *LocalImageModerator) ModerateImageURLs(ctx context.Context, urls []string) ([]*ImageModerationResult, error) {
+// safeString returns the string value of a pointer, or empty string if nil.
+func safeString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func (m *LocalImageModerator) tryCache(
+	ctx context.Context,
+	fHash string,
+) *ImageModerationResult {
+	// Redis
+	if cached, err := m.getFromRedisCache(ctx, fHash); err == nil && cached != nil {
+		m.log.Debugf("Redis cache hit for fileHash: %s", fHash)
+		return m.cacheEntryToResult(cached, true)
+	}
+	// DB
+	if dbResult, err := m.badImageChecker.FindByFileHash(ctx, fHash); err == nil && dbResult != nil {
+		m.log.Debugf("DB cache hit for fileHash: %s", fHash)
+
+		m.setRedisCache(ctx, fHash, dbResult)
+		return m.dbCacheToResult(dbResult)
+	}
+	return nil
+}
+
+// detectNSFWFromBytes performs NSFW detection from raw image bytes and saves result.
+func (m *LocalImageModerator) detectNSFWFromBytes(ctx context.Context, imgData []byte, url string, phash uint64, fileHash string) (*ImageModerationResult, error) {
+	result := &ImageModerationResult{
+		IsClean:    true,
+		Categories: make(map[ImageCategory]float64),
+		PHash:      phash,
+	}
+
+	if m.nsfwClient == nil {
+		m.log.Warn("NSFW client not configured, skipping NSFW detection")
+		if fileHash != "" {
+			m.saveImageResult(ctx, fileHash, int64(phash), "safe", 0, url)
+		}
+		return result, nil
+	}
+
+	// Send raw bytes to NSFW service (no re-download by the service)
+	nsfwResult, err := m.nsfwClient.Predict(ctx, imgData)
+	if err != nil {
+		m.log.Warnf("NSFW detection failed: %v", err)
+		return result, nil
+	}
+
+	result.NSFWScore = nsfwResult.NsfwScore
+	result.Categories[ImageCategoryNSFW] = nsfwResult.NsfwScore
+
+	if nsfwResult.IsNsfw || nsfwResult.NsfwScore >= m.config.NSFWThreshold {
+		result.IsClean = false
+		result.ShouldReject = true
+
+		if phash != 0 {
+			if err := m.saveBadImage(ctx, phash, "nsfw", nsfwResult.NsfwScore, url); err != nil {
+				m.log.Warnf("Failed to save bad image: %v", err)
+			}
+		}
+		if fileHash != "" {
+			m.saveImageResult(ctx, fileHash, int64(phash), "unsafe", nsfwResult.NsfwScore, url)
+		}
+	} else {
+		if fileHash != "" {
+			m.saveImageResult(ctx, fileHash, int64(phash), "safe", nsfwResult.NsfwScore, url)
+		}
+	}
+
+	return result, nil
+}
+
+// ModerateImageURLs moderates multiple image URLs using worker pool.
+func (m *LocalImageModerator) ModerateImageURLs(ctx context.Context, ownerID string, urls []string, fileHashes []*string) ([]*ImageModerationResult, error) {
 	workerCount := m.config.Workers
 	if workerCount <= 0 {
 		workerCount = 4 // fallback default
 	}
 	type job struct {
-		index int
-		url   string
+		index    int
+		url      string
+		fileHash *string
 	}
 	jobs := make(chan job)
 	results := make([]*ImageModerationResult, len(urls))
@@ -178,7 +335,7 @@ func (m *LocalImageModerator) ModerateImageURLs(ctx context.Context, urls []stri
 				return
 			default:
 			}
-			res, err := m.ModerateImageURL(ctx, j.url)
+			res, err := m.ModerateImageURL(ctx, ownerID, j.url, j.fileHash)
 			if err != nil {
 				m.log.Warnf("Failed to moderate image URL %s: %v", j.url, err)
 				continue
@@ -193,9 +350,14 @@ func (m *LocalImageModerator) ModerateImageURLs(ctx context.Context, urls []stri
 	}
 	// Push jobs
 	for i, url := range urls {
+		var fh *string
+		if fileHashes != nil && i < len(fileHashes) {
+			fh = fileHashes[i]
+		}
 		jobs <- job{
-			index: i,
-			url:   url,
+			index:    i,
+			url:      url,
+			fileHash: fh,
 		}
 	}
 	close(jobs)
@@ -203,8 +365,8 @@ func (m *LocalImageModerator) ModerateImageURLs(ctx context.Context, urls []stri
 	return results, nil
 }
 
-// detectNSFWFromURL performs NSFW detection from URL.
-func (m *LocalImageModerator) detectNSFWFromURL(ctx context.Context, url string, phash uint64) (*ImageModerationResult, error) {
+// detectNSFWFromURL performs NSFW detection from URL and saves result.
+func (m *LocalImageModerator) detectNSFWFromURL(ctx context.Context, url string, phash uint64, fileHash string) (*ImageModerationResult, error) {
 	result := &ImageModerationResult{
 		IsClean:    true,
 		Categories: make(map[ImageCategory]float64),
@@ -213,6 +375,10 @@ func (m *LocalImageModerator) detectNSFWFromURL(ctx context.Context, url string,
 
 	if m.nsfwClient == nil {
 		m.log.Warn("NSFW client not configured, skipping NSFW detection")
+		// Save as safe
+		if fileHash != "" {
+			m.saveImageResult(ctx, fileHash, int64(phash), "safe", 0, url)
+		}
 		return result, nil
 	}
 
@@ -234,6 +400,15 @@ func (m *LocalImageModerator) detectNSFWFromURL(ctx context.Context, url string,
 				m.log.Warnf("Failed to save bad image: %v", err)
 			}
 		}
+		// Save unsafe result to DB + Redis
+		if fileHash != "" {
+			m.saveImageResult(ctx, fileHash, int64(phash), "unsafe", nsfwResult.NsfwScore, url)
+		}
+	} else {
+		// Save safe result to DB + Redis
+		if fileHash != "" {
+			m.saveImageResult(ctx, fileHash, int64(phash), "safe", nsfwResult.NsfwScore, url)
+		}
 	}
 
 	return result, nil
@@ -254,6 +429,86 @@ func (m *LocalImageModerator) saveBadImage(ctx context.Context, phash uint64, ca
 
 	m.log.Infof("Saved bad image: pHash=%016x, category=%s, score=%.2f", phash, category, nsfwScore)
 	return nil
+}
+
+// saveImageResult saves any image result (safe or unsafe) to DB + Redis cache.
+func (m *LocalImageModerator) saveImageResult(ctx context.Context, fileHash string, phash int64, category string, nsfwScore float64, sourceURL string) {
+	// Save to DB
+	if err := m.badImageChecker.SaveImageResult(ctx, fileHash, phash, category, nsfwScore, sourceURL); err != nil {
+		m.log.Warnf("Failed to save image result to DB: %v", err)
+	}
+
+	// Save to Redis cache
+	m.setRedisCache(ctx, fileHash, &ImageCacheResult{
+		Category:  category,
+		NSFWScore: nsfwScore,
+		PHash:     phash,
+	})
+}
+
+// Redis cache helpers
+
+func (m *LocalImageModerator) redisCacheKey(fileHash string) string {
+	return m.config.CacheKeyPrefix + fileHash
+}
+
+func (m *LocalImageModerator) getFromRedisCache(ctx context.Context, fileHash string) (*imageCacheEntry, error) {
+	data, err := m.redisCache.GetString(ctx, m.redisCacheKey(fileHash))
+	if err != nil {
+		return nil, err
+	}
+
+	var entry imageCacheEntry
+	if err := json.Unmarshal([]byte(data), &entry); err != nil {
+		return nil, err
+	}
+	return &entry, nil
+}
+
+func (m *LocalImageModerator) setRedisCache(ctx context.Context, fileHash string, result *ImageCacheResult) {
+	entry := imageCacheEntry{
+		Category:  result.Category,
+		NSFWScore: result.NSFWScore,
+		PHash:     result.PHash,
+		IsClean:   result.Category == "safe",
+	}
+	data, err := json.Marshal(entry)
+	if err != nil {
+		m.log.Warnf("Failed to marshal image cache entry: %v", err)
+		return
+	}
+	if err := m.redisCache.SetString(ctx, m.redisCacheKey(fileHash), string(data), m.config.CacheTTL); err != nil {
+		m.log.Warnf("Failed to set Redis image cache: %v", err)
+	}
+}
+
+func (m *LocalImageModerator) cacheEntryToResult(entry *imageCacheEntry, cacheHit bool) *ImageModerationResult {
+	result := &ImageModerationResult{
+		IsClean:    entry.IsClean,
+		Categories: map[ImageCategory]float64{ImageCategoryNSFW: entry.NSFWScore},
+		PHash:      uint64(entry.PHash),
+		NSFWScore:  entry.NSFWScore,
+		CacheHit:   cacheHit,
+	}
+	if !entry.IsClean {
+		result.ShouldReject = true
+	}
+	return result
+}
+
+func (m *LocalImageModerator) dbCacheToResult(dbResult *ImageCacheResult) *ImageModerationResult {
+	isClean := dbResult.Category == "safe"
+	result := &ImageModerationResult{
+		IsClean:    isClean,
+		Categories: map[ImageCategory]float64{ImageCategoryNSFW: dbResult.NSFWScore},
+		PHash:      uint64(dbResult.PHash),
+		NSFWScore:  dbResult.NSFWScore,
+		CacheHit:   true,
+	}
+	if !isClean {
+		result.ShouldReject = true
+	}
+	return result
 }
 
 // AddPHashToBloom adds a pHash directly to the Bloom filter (for rebuilding).
@@ -278,4 +533,15 @@ func (m *LocalImageModerator) RebuildBloomFilter(ctx context.Context, phashes []
 	}
 	m.log.Infof("Rebuilt image Bloom filter with %d pHashes", len(phashes))
 	return nil
+}
+
+// InvalidateCache removes a fileHash from Redis cache.
+func (m *LocalImageModerator) InvalidateCache(ctx context.Context, fileHash string) error {
+	_, err := m.redisCache.Del(ctx, m.redisCacheKey(fileHash))
+	return err
+}
+
+// GetCacheKey returns the Redis cache key for a fileHash (for debugging).
+func (m *LocalImageModerator) GetCacheKey(fileHash string) string {
+	return fmt.Sprintf("%s%s", m.config.CacheKeyPrefix, fileHash)
 }

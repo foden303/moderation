@@ -11,6 +11,9 @@ type Cache interface {
 	SetString(ctx context.Context, key, value string, exp time.Duration) error
 	GetString(ctx context.Context, key string) (string, error)
 
+	SetBytes(ctx context.Context, key string, value []byte, exp time.Duration) error
+	GetBytes(ctx context.Context, key string) ([]byte, error)
+
 	SetInt(ctx context.Context, key string, value int, exp time.Duration) error
 	GetInt(ctx context.Context, key string) (int, error)
 

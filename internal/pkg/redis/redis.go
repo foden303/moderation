@@ -46,6 +46,21 @@ func (r *Redis) GetString(ctx context.Context, key string) (string, error) {
 	}
 	return val, nil
 }
+
+func (r *Redis) SetBytes(ctx context.Context, key string, value []byte, exp time.Duration) error {
+	if err := r.client.Set(ctx, key, value, exp).Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Redis) GetBytes(ctx context.Context, key string) ([]byte, error) {
+	val, err := r.client.Get(ctx, key).Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return val, nil
+}
 func (r *Redis) SetUint(ctx context.Context, key string, value uint, exp time.Duration) error {
 	if err := r.client.Set(ctx, key, value, exp).Err(); err != nil {
 		return err

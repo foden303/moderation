@@ -51,16 +51,40 @@ func (r *imageCacheRepo) Get(ctx context.Context, fileHash string) (*biz.ImageCa
 	return toBizImageCache(result), nil
 }
 
-func (r *imageCacheRepo) GetByPHash(ctx context.Context, phash int64) ([]*biz.ImageCache, error) {
-	results, err := r.data.Queries.GetImageCacheByPHash(ctx, phash)
+func (r *imageCacheRepo) FindSimilarByPHash(ctx context.Context, phash int64, maxDistance int32) ([]*biz.ImageCache, error) {
+	results, err := r.data.Queries.FindSimilarByPHash(ctx, sqlc.FindSimilarByPHashParams{
+		TargetPhash: phash,
+		MaxDistance: int64(maxDistance),
+	})
 	if err != nil {
 		return nil, err
 	}
 	caches := make([]*biz.ImageCache, len(results))
 	for i, result := range results {
-		caches[i] = toBizImageCache(result)
+		caches[i] = toBizImageCacheFromRow(result)
 	}
 	return caches, nil
+}
+
+func toBizImageCacheFromRow(r sqlc.FindSimilarByPHashRow) *biz.ImageCache {
+	var expiresAt *time.Time
+	if r.ExpiresAt.Valid {
+		t := r.ExpiresAt.Time
+		expiresAt = &t
+	}
+	return &biz.ImageCache{
+		FileHash:     r.FileHash,
+		PHash:        r.Phash,
+		DetectResult: r.DetectResult,
+		Category:     r.Category,
+		NSFWScore:    r.NsfwScore,
+		ModelVersion: r.ModelVersion,
+		SourceURL:    r.SourceUrl,
+		AddedBy:      r.AddedBy,
+		ExpiresAt:    expiresAt,
+		CreatedAt:    r.CreatedAt.Time,
+		UpdatedAt:    r.UpdatedAt.Time,
+	}
 }
 
 func (r *imageCacheRepo) Delete(ctx context.Context, fileHash string) error {

@@ -15,8 +15,14 @@ RETURNING *;
 -- name: GetImageCache :one
 SELECT * FROM image_caches WHERE file_hash = $1;
 
--- name: GetImageCacheByPHash :many
-SELECT * FROM image_caches WHERE phash = $1;
+-- name: FindSimilarByPHash :many
+SELECT *,
+       bit_count((phash # @target_phash)::bit(64))::integer AS distance
+FROM image_caches
+WHERE category <> 'safe'
+  AND bit_count((phash # @target_phash)::bit(64))::integer <= @max_distance
+ORDER BY distance ASC
+LIMIT 5;
 
 -- name: DeleteImageCache :exec
 DELETE FROM image_caches WHERE file_hash = $1;

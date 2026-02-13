@@ -71,6 +71,14 @@ func (r *RedisWrapper) GetString(ctx context.Context, key string) (string, error
 	return r.client.Get(ctx, key).Result()
 }
 
+func (r *RedisWrapper) SetBytes(ctx context.Context, key string, value []byte, exp time.Duration) error {
+	return r.client.Set(ctx, key, value, exp).Err()
+}
+
+func (r *RedisWrapper) GetBytes(ctx context.Context, key string) ([]byte, error) {
+	return r.client.Get(ctx, key).Bytes()
+}
+
 func (r *RedisWrapper) SetInt(ctx context.Context, key string, value int, exp time.Duration) error {
 	return r.client.Set(ctx, key, value, exp).Err()
 }

@@ -283,6 +283,8 @@ components:
                     type: string
                 imageUrl:
                     type: string
+                fileHash:
+                    type: string
         moderation.v1.ModerateRequest:
             type: object
             properties:

@@ -25,12 +25,12 @@ type Querier interface {
 	DeleteImageDataset(ctx context.Context, fileHash string) error
 	DeleteTextCache(ctx context.Context, contentHash string) error
 	DeleteTextDataset(ctx context.Context, contentHash string) error
+	FindSimilarByPHash(ctx context.Context, arg FindSimilarByPHashParams) ([]FindSimilarByPHashRow, error)
 	GetAllImageCaches(ctx context.Context) ([]ImageCach, error)
 	GetAllImageDatasets(ctx context.Context) ([]ImageDataset, error)
 	GetAllTextCaches(ctx context.Context) ([]TextCach, error)
 	GetAllTextDatasets(ctx context.Context) ([]TextDataset, error)
 	GetImageCache(ctx context.Context, fileHash string) (ImageCach, error)
-	GetImageCacheByPHash(ctx context.Context, phash int64) ([]ImageCach, error)
 	GetImageDataset(ctx context.Context, fileHash string) (ImageDataset, error)
 	GetImageDatasetByID(ctx context.Context, id int64) (ImageDataset, error)
 	GetImageDatasetByPHash(ctx context.Context, phash int64) ([]ImageDataset, error)
